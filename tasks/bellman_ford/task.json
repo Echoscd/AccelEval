@@ -1,19 +1,20 @@
 {
   "task_id": "bellman_ford",
-  "name": "Bellman-Ford Single Source Shortest Path",
-  "category": "graph_traversal",
-  "difficulty": 3,
-  "tags": ["iterative", "atomic", "convergence_detection", "CSR_graph"],
+  "name": "Bellman-Ford SSSP (Request-Based)",
+  "category": "graph",
+  "difficulty": 2,
+  "tags": ["request_based", "graph", "sssp", "CSR_graph"],
 
   "input_sizes": {
-    "large":  {"V": 500000, "E": 2500000, "seed": 42}
+    "small":  {"V": 1000,   "E": 5000,    "seed": 42, "num_requests": 100},
+    "medium": {"V": 100000, "E": 500000,  "seed": 42, "num_requests": 100},
+    "large":  {"V": 500000, "E": 2500000, "seed": 42, "num_requests": 100}
   },
 
   "correctness": {
-    "mode": "numerical",
-    "atol": 0.01,
-    "rtol": 0.01,
-    "allow_different_iterations": true
+    "mode": "checksum",
+    "field": "cs",
+    "atol": 0.1
   },
 
   "timing": {
@@ -22,14 +23,14 @@
     "timeout": 180
   },
 
-  "build_command": "nvcc -O2 -arch=sm_89 -o solution solution.cu",
+  "build_command": "",
   "extra_build_flags": "",
 
   "gpu_optimization_points": [
-    "atomicMin_float",
-    "early_termination",
-    "persistent_kernel",
-    "shared_memory_reduction",
-    "edge_vs_node_parallel"
+    "persistent_graph_data",
+    "batch_requests",
+    "avoid_realloc",
+    "coalesced_access",
+    "early_exit"
   ]
 }

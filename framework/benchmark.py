@@ -13,6 +13,7 @@ from typing import Optional
 
 from .task import load_task, get_task_dir
 from .profile import run_nsys_profile, analyze_nsys_trace, analyze_all_nsys_csvs, write_nsys_full_summary
+from .config import get_config
 
 
 @dataclass
@@ -51,17 +52,17 @@ class BenchmarkResult:
 
 def parse_timing_output(stdout: str) -> Optional[float]:
     """
-    Parse GPU timing from program stdout.
+    Parse timing from program stdout.
     
     Expected format (programs should print this):
-        GPU_TIME_MS: 0.634
+        TIME_MS: 0.634
     
     Also supports:
         Time: 0.634 ms
         Elapsed: 0.634ms
     """
     patterns = [
-        r'GPU_TIME_MS:\s*([\d.]+)',
+        r'TIME_MS:\s*([\d.]+)',
         r'Time:\s*([\d.]+)\s*ms',
         r'Elapsed:\s*([\d.]+)\s*ms',
         r'gpu_time_ms=([\d.]+)',
@@ -90,46 +91,38 @@ def get_gpu_name(device_id: int = 0) -> str:
 
 def run_cpu_baseline(task_id: str, data_dir: str = None) -> float:
     """
-    Run CPU reference and parse its timing.
-    Returns time in milliseconds.
+    ORBench v2: Read CPU baseline time from cpu_time_ms.txt in data_dir.
     """
     task_dir = get_task_dir(task_id)
-    cpu_exe = os.path.join(task_dir, "cpu_reference")
-
-    if not os.path.exists(cpu_exe):
-        # Try to compile
-        cpu_src = os.path.join(task_dir, "cpu_reference.cu")
-        subprocess.run(
-            ["nvcc", "-O2", "-o", cpu_exe, cpu_src],
-            capture_output=True,
-        )
-
-    if not os.path.exists(cpu_exe):
-        return -1.0
-
     # Find data_dir if not provided
     if data_dir is None:
         for size_name in ["large", "medium", "small"]:
             candidate = os.path.join(task_dir, "data", size_name)
-            if os.path.exists(os.path.join(candidate, "input.txt")):
+            if os.path.exists(os.path.join(candidate, "cpu_time_ms.txt")):
                 data_dir = candidate
                 break
 
     if data_dir is None:
         return -1.0
 
-    ok, stdout, stderr = _run_exe(cpu_exe, args=[data_dir], timeout=300)
-    if ok:
-        t = parse_timing_output(stdout)
-        if t is not None:
-            return t
+    cpu_time_path = os.path.join(data_dir, "cpu_time_ms.txt")
+    if not os.path.exists(cpu_time_path):
+        return -1.0
+    try:
+        with open(cpu_time_path, "r") as f:
+            return float(f.read().strip())
+    except Exception:
+        return -1.0
 
-    return -1.0
 
-
-def _run_exe(exe_path: str, args: list[str] = None, timeout: int = 180,
+def _run_exe(exe_path: str, args: list[str] = None, timeout: int = None,
              device_id: int = 0) -> tuple[bool, str, str]:
     """Run executable with CUDA device selection"""
+    # Use config default if timeout not provided
+    if timeout is None:
+        config = get_config()
+        timeout = config.eval.timeout
+    
     cmd = [exe_path] + (args or [])
     env = os.environ.copy()
     env["CUDA_VISIBLE_DEVICES"] = str(device_id)
@@ -167,23 +160,45 @@ def benchmark_solution(
     result.device_id = device_id
     result.hardware = get_gpu_name(device_id)
 
-    # Pick the largest available data size for benchmarking
+    # Pick a data size for benchmarking.
+    #
+    # Preference order:
+    #   1) ORBENCH_BENCHMARK_SIZES env (comma-separated list, e.g. "small,medium")
+    #   2) ORBENCH_VALIDATE_SIZES env (to stay consistent with validation)
+    #   3) Default: ["large", "medium", "small"]
+    #
+    # For each candidate size, require:
+    #   - input.bin exists (v2 data format)
+    #   - cpu_time_ms.txt exists (CPU baseline)
+    import os as _os
+
+    sizes_env = _os.environ.get("ORBENCH_BENCHMARK_SIZES") or _os.environ.get("ORBENCH_VALIDATE_SIZES")
+    if sizes_env:
+        size_candidates = [s.strip() for s in sizes_env.split(",") if s.strip()]
+    else:
+        size_candidates = ["large", "medium", "small"]
+
     data_dir = None
-    for size_name in ["large", "medium", "small"]:
-        candidate = os.path.join(task_dir, "data", size_name)
-        if os.path.exists(os.path.join(candidate, "input.txt")):
+    for size_name in size_candidates:
+        candidate = _os.path.join(task_dir, "data", size_name)
+        if _os.path.exists(_os.path.join(candidate, "input.bin")) and _os.path.exists(
+            _os.path.join(candidate, "cpu_time_ms.txt")
+        ):
             data_dir = candidate
             break
 
     if data_dir is None:
-        result.error = "No pre-generated data found for benchmarking"
+        result.error = "No pre-generated data (input.bin + cpu_time_ms.txt) found for benchmarking"
         return result
 
     exe_args = [data_dir]
+    
+    # Use config timeout if task timeout is not set or use config default
+    config = get_config()
+    timeout_to_use = task.timeout if task.timeout > 0 else config.eval.timeout
 
-    # === Level A: End-to-end timing from CUDA Events ===
-    # Harness internally does: 3 warmup + 10 timed trials, prints mean
-    ok, stdout, stderr = _run_exe(exe_path, args=exe_args, device_id=device_id, timeout=task.timeout)
+    # === Level A: TIME_MS from harness (timed region contains solution_run only) ===
+    ok, stdout, stderr = _run_exe(exe_path, args=exe_args, device_id=device_id, timeout=timeout_to_use)
     if not ok:
         result.error = f"Execution failed: {stderr[:200]}"
         return result
@@ -209,9 +224,10 @@ def benchmark_solution(
         try:
             # Save nsys output next to the executable
             nsys_output_dir = os.path.dirname(exe_path)
+            nsys_timeout = config.profiling.nsys_timeout
             nsys_result = run_nsys_profile(
                 exe_path, exe_args=exe_args, device_id=device_id,
-                timeout=task.timeout, output_dir=nsys_output_dir
+                timeout=nsys_timeout, output_dir=nsys_output_dir
             )
 
             if nsys_result is not None:

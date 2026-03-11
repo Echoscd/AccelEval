@@ -6,24 +6,24 @@
     "compile_error": "",
     "correct": true,
     "correctness_detail": {
-      "large": true
+      "small": true
     },
     "benchmark": {
       "e2e_time_ms": {
-        "mean": 1.707,
+        "mean": 12.097,
         "std": 0.0,
-        "min": 1.707,
-        "max": 1.707,
+        "min": 12.097,
+        "max": 12.097,
         "num_trials": 1
       },
-      "kernel_time_ms": 1.393565,
-      "gpu_utilization": 0.8163825424721733,
-      "num_kernel_launches": 29,
-      "memcpy_overhead_ms": 2.275486,
+      "kernel_time_ms": null,
+      "gpu_utilization": null,
+      "num_kernel_launches": null,
+      "memcpy_overhead_ms": null,
       "nsys_csv_path": null,
-      "cpu_baseline_ms": 25.721,
-      "speedup_e2e": 15.06795547744581,
-      "speedup_kernel": 18.45697904295817,
+      "cpu_baseline_ms": 11.007,
+      "speedup_e2e": 0.9098950152930478,
+      "speedup_kernel": null,
       "hardware": "NVIDIA L20X",
       "device_id": 0,
       "error": ""

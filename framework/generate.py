@@ -9,6 +9,7 @@ import argparse
 from typing import Optional
 
 from .task import load_task, load_prompt, ORBENCH_ROOT
+from .config import get_config
 
 
 def extract_cuda_code(response_text: str) -> str:
@@ -104,7 +105,8 @@ def generate_solutions(
 
         print(f"  [GEN] {task_id} sample_{i} with {model}...")
         try:
-            response = call_llm(model, prompt, api_key, api_base)
+            config = get_config()
+            response = call_llm(model, prompt, api_key, api_base, max_tokens=config.llm.max_tokens)
             code = extract_cuda_code(response)
 
             with open(output_path, "w") as f:

@@ -9,6 +9,7 @@ import shutil
 from dataclasses import dataclass
 
 from .task import load_task, ORBENCH_ROOT
+from .config import get_config
 
 
 @dataclass
@@ -23,7 +24,7 @@ def compile_solution(
     task_id: str,
     solution_path: str,
     build_dir: str = None,
-    arch: str = "sm_89",
+    arch: str = None,
     timeout: int = 60,
 ) -> CompileResult:
     """
@@ -40,6 +41,11 @@ def compile_solution(
         CompileResult with success flag, executable path, and compiler output
     """
     task = load_task(task_id)
+    
+    # Use config default if arch not provided
+    if arch is None:
+        config = get_config()
+        arch = config.gpu.arch
 
     if build_dir is None:
         # Use content hash for cache key
@@ -49,14 +55,22 @@ def compile_solution(
 
     os.makedirs(build_dir, exist_ok=True)
 
-    # Copy source to build directory
+    # Copy solution to build directory
     src_in_build = os.path.join(build_dir, "solution.cu")
     shutil.copy2(solution_path, src_in_build)
 
-    exe_path = os.path.join(build_dir, "solution")
+    exe_path = os.path.join(build_dir, "solution_gpu")
 
-    # Single file compilation - LLM_input.cu is self-contained
-    cmd = ["nvcc", "-O2", f"-arch={arch}", "-o", exe_path, src_in_build]
+    # ORBench v2 compilation: harness_gpu.cu + solution.cu
+    harness_path = os.path.join(ORBENCH_ROOT, "framework", "harness_gpu.cu")
+    include_dir = os.path.join(ORBENCH_ROOT, "framework")
+    cmd = [
+        "nvcc", "-O2", f"-arch={arch}",
+        "-I", include_dir,
+        harness_path,
+        src_in_build,
+        "-o", exe_path,
+    ]
 
     # Add extra flags from task config
     if task.extra_build_flags:
@@ -92,8 +106,8 @@ def compile_solution(
 
 def batch_compile(
     tasks_and_solutions: list[tuple[str, str]],
-    arch: str = "sm_89",
-    num_workers: int = 8,
+    arch: str = None,
+    num_workers: int = None,
 ) -> dict[str, CompileResult]:
     """
     Compile multiple solutions in parallel (CPU-only, no GPU needed).
@@ -107,6 +121,13 @@ def batch_compile(
         Dict mapping solution_path -> CompileResult
     """
     import multiprocessing as mp
+    
+    # Use config defaults if not provided
+    config = get_config()
+    if arch is None:
+        arch = config.gpu.arch
+    if num_workers is None:
+        num_workers = config.eval.num_cpu_workers
 
     def _compile_one(args):
         task_id, solution_path = args

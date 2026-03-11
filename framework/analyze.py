@@ -11,10 +11,31 @@ from .task import load_task, load_all_tasks, ORBENCH_ROOT
 
 
 def load_eval_results(run_name: str) -> dict:
-    """Load eval_results.json for a run"""
-    path = os.path.join(ORBENCH_ROOT, "runs", run_name, "eval_results.json")
+    """
+    Load evaluation results for a run.
+
+    Preference order:
+      1) Latest timestamped file: eval_results_*.json
+      2) Legacy file: eval_results.json
+    """
+    run_dir = os.path.join(ORBENCH_ROOT, "runs", run_name)
+    if not os.path.isdir(run_dir):
+        raise FileNotFoundError(f"Run directory not found: {run_dir}")
+
+    # Prefer newest timestamped results file
+    candidates = []
+    for fn in os.listdir(run_dir):
+        if fn.startswith("eval_results_") and fn.endswith(".json"):
+            candidates.append(os.path.join(run_dir, fn))
+    if candidates:
+        path = max(candidates, key=lambda p: os.path.getmtime(p))
+    else:
+        # Fallback: legacy filename
+        path = os.path.join(run_dir, "eval_results.json")
+
     if not os.path.exists(path):
         raise FileNotFoundError(f"No results found: {path}")
+
     with open(path, "r") as f:
         return json.load(f)
 

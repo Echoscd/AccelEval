@@ -12,12 +12,11 @@ import multiprocessing as mp
 from dataclasses import dataclass, asdict
 from typing import Optional
 
-import torch
-
 from .task import load_task, load_all_tasks, ORBENCH_ROOT
 from .compile import compile_solution
 from .validate import validate_solution, ValidationResult
 from .benchmark import benchmark_solution, BenchmarkResult
+from .config import get_config
 
 
 @dataclass
@@ -41,14 +40,21 @@ def eval_single_sample(
     sample_path: str,
     sample_id: int,
     device_id: int = 0,
-    arch: str = "sm_89",
-    run_nsys: bool = True,
+    arch: str = None,
+    run_nsys: bool = None,
     save_nsys_csv: bool = False,
 ) -> EvalResult:
     """
     Evaluate a single solution sample: compile → validate → benchmark.
     Runs in a subprocess to isolate CUDA context.
     """
+    # Use config defaults if not provided
+    config = get_config()
+    if arch is None:
+        arch = config.gpu.arch
+    if run_nsys is None:
+        run_nsys = config.profiling.nsys_enabled
+    
     result = EvalResult(task_id=task_id, sample_id=sample_id)
 
     # Step 1: Compile
@@ -128,10 +134,10 @@ def save_eval_result(result: EvalResult, eval_file_path: str):
 def batch_eval(
     run_name: str,
     task_ids: list[str] = None,
-    arch: str = "sm_89",
-    num_gpu_devices: int = 1,
-    timeout: int = 180,
-    run_nsys: bool = True,
+    arch: str = None,
+    num_gpu_devices: int = None,
+    timeout: int = None,
+    run_nsys: bool = None,
     save_nsys_csv: bool = False,
 ):
     """
@@ -140,18 +146,49 @@ def batch_eval(
     Args:
         run_name: Name of the run directory (under runs/)
         task_ids: List of task IDs to evaluate (None = all)
-        arch: GPU architecture
-        num_gpu_devices: Number of GPUs to use in parallel
-        timeout: Per-sample timeout
-        run_nsys: Whether to run nsys profiling
+        arch: GPU architecture (None = use config default)
+        num_gpu_devices: Number of GPUs to use in parallel (None = use config default)
+        timeout: Per-sample timeout (None = use config default)
+        run_nsys: Whether to run nsys profiling (None = use config default)
         save_nsys_csv: Whether to save nsys CSV and summary to run directory
     """
-    # Ensure spawn for CUDA context isolation
-    if mp.get_start_method(allow_none=True) is None:
-        mp.set_start_method("spawn")
+    # Use config defaults if not provided
+    config = get_config()
+    if arch is None:
+        arch = config.gpu.arch
+    if num_gpu_devices is None:
+        num_gpu_devices = config.eval.num_gpu_devices
+    if timeout is None:
+        timeout = config.eval.timeout
+    if run_nsys is None:
+        run_nsys = config.profiling.nsys_enabled
+    
+    # Ensure a safe multiprocessing start method.
+    #
+    # Default to "spawn" for CUDA context isolation, BUT:
+    # when the caller runs Python from stdin/heredoc (python - <<'PY' ...),
+    # spawn will try to re-run __main__ from a fake path like ".../<stdin>",
+    # causing FileNotFoundError in child processes.
+    #
+    # In that case, fall back to "fork" on Linux to keep CLI experiments smooth.
+    cur_method = mp.get_start_method(allow_none=True)
+    if cur_method is None:
+        main_path = getattr(sys.modules.get("__main__"), "__file__", None)
+        argv0 = sys.argv[0] if sys.argv else ""
+        from_stdin = (main_path is None) or (argv0 in ("-c", "<stdin>")) or (isinstance(main_path, str) and main_path.endswith("<stdin>"))
+        if from_stdin:
+            try:
+                mp.set_start_method("fork")
+            except RuntimeError:
+                mp.set_start_method("spawn")
+        else:
+            mp.set_start_method("spawn")
 
     run_dir = os.path.join(ORBENCH_ROOT, "runs", run_name)
-    eval_file = os.path.join(run_dir, "eval_results.json")
+    # Always write to a fresh results file for each invocation (no SKIP-by-existing).
+    # Name includes date/time for easy experiment tracking.
+    ts = time.strftime("%Y%m%d_%H%M%S", time.localtime())
+    eval_file = os.path.join(run_dir, f"eval_results_{ts}.json")
 
     if not os.path.exists(run_dir):
         print(f"Run directory not found: {run_dir}")
@@ -173,15 +210,6 @@ def batch_eval(
             if filename.startswith("sample_") and filename.endswith(".cu"):
                 sample_id = int(filename.split("_")[1].split(".")[0])
                 sample_path = os.path.join(task_dir, filename)
-
-                # Check if already evaluated
-                key = f"{task_id}_sample_{sample_id}"
-                if os.path.exists(eval_file):
-                    with open(eval_file, "r") as f:
-                        existing = json.load(f)
-                    if key in existing:
-                        print(f"  [SKIP] {key} already evaluated")
-                        continue
 
                 work_list.append((task_id, sample_path, sample_id))
 

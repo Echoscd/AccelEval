@@ -1,0 +1,16 @@
+{
+  "bellman_ford_sample_0": {
+    "task_id": "bellman_ford",
+    "sample_id": 0,
+    "compiled": true,
+    "compile_error": "",
+    "correct": false,
+    "correctness_detail": {
+      "small": true,
+      "medium": true,
+      "large": false
+    },
+    "benchmark": null,
+    "error": "GPU solution failed on size 'large': Execution timed out. "
+  }
+}

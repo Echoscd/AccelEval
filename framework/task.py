@@ -26,6 +26,7 @@ class TaskConfig:
 
     # Correctness checking config
     correctness_mode: str = "numerical"   # "exact" or "numerical"
+    correctness_field: str = "cs"         # used when correctness_mode == "checksum"
     atol: float = 0.01
     rtol: float = 0.01
     allow_different_iterations: bool = False
@@ -62,6 +63,7 @@ def load_task(task_id: str) -> TaskConfig:
         tags=data.get("tags", []),
         input_sizes=data.get("input_sizes", {}),
         correctness_mode=data.get("correctness", {}).get("mode", "numerical"),
+        correctness_field=data.get("correctness", {}).get("field", "cs"),
         atol=data.get("correctness", {}).get("atol", 0.01),
         rtol=data.get("correctness", {}).get("rtol", 0.01),
         allow_different_iterations=data.get("correctness", {}).get("allow_different_iterations", False),
@@ -88,6 +90,20 @@ def get_task_dir(task_id: str) -> str:
     return os.path.join(TASKS_DIR, task_id)
 
 
+def load_llm_input(task_id: str) -> str:
+    """Load LLM_input.cu template (auto-generates from template if needed)"""
+    ensure_task_files_generated(task_id)
+    
+    task_dir = get_task_dir(task_id)
+    input_path = os.path.join(task_dir, "LLM_input.cu")
+
+    if not os.path.exists(input_path):
+        raise FileNotFoundError(f"LLM_input.cu not found: {input_path}")
+
+    with open(input_path, "r") as f:
+        return f.read()
+
+
 def load_prompt(task_id: str, level: int) -> str:
     """Load prompt for a task at a given difficulty level (1, 2, or 3)"""
     task_dir = get_task_dir(task_id)
@@ -101,9 +117,9 @@ def load_prompt(task_id: str, level: int) -> str:
 
 
 def load_cpu_reference(task_id: str) -> str:
-    """Load the CPU reference source code"""
+    """Load the CPU reference source code (ORBench v2 uses cpu_reference.c)"""
     task_dir = get_task_dir(task_id)
-    ref_path = os.path.join(task_dir, "cpu_reference.cu")
+    ref_path = os.path.join(task_dir, "cpu_reference.c")
 
     if not os.path.exists(ref_path):
         raise FileNotFoundError(f"CPU reference not found: {ref_path}")

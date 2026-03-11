@@ -11,12 +11,14 @@ from typing import Optional
 
 import pandas as pd
 
+from .config import get_config
+
 
 def check_nsys_available() -> bool:
     """Check if nsys is available in the environment"""
     return shutil.which("nsys") is not None
 
-
+#TODO: Conduct a more comprehensive check of ncu availability and permission. Only check RmProfilingAdminOnly for now.
 def check_ncu_available() -> bool:
     """
     Check if NCU is available AND has profiling permission.
@@ -41,7 +43,7 @@ def check_ncu_available() -> bool:
 
     return True
 
-
+#TODO: remove this function, since k8s Pod is a specific environment.
 def _is_k8s_pod() -> bool:
     """Check if running inside a Kubernetes pod"""
     try:
@@ -55,7 +57,7 @@ def run_nsys_profile(
     exe_path: str,
     exe_args: list[str] = None,
     device_id: int = 0,
-    timeout: int = 60,
+    timeout: int = None,
     output_dir: str = None,
 ) -> Optional[str]:
     """
@@ -65,13 +67,18 @@ def run_nsys_profile(
         exe_path: Path to compiled CUDA executable
         exe_args: Arguments to pass to the executable
         device_id: GPU device ID
-        timeout: Max profiling duration in seconds
+        timeout: Max profiling duration in seconds (None = use config default)
         output_dir: Where to save outputs (default: temp dir)
     
     Returns:
         Tuple of (primary_csv_path, dict of report_name -> csv_path),
         or None if profiling failed.
     """
+    # Use config default if timeout not provided
+    if timeout is None:
+        config = get_config()
+        timeout = config.profiling.nsys_timeout
+    
     if not check_nsys_available():
         return None
 
@@ -90,6 +97,7 @@ def run_nsys_profile(
     env["CUDA_VISIBLE_DEVICES"] = str(device_id)
 
     # Step 1: Profile
+    #TODO: Adding CPU profiling for the whole pipeline.
     nsys_cmd = [
         "nsys", "profile",
         "-t", "cuda",

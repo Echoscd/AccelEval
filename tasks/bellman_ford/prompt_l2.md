@@ -1,96 +1,89 @@
-# Task: Bellman-Ford Single Source Shortest Path (GPU Acceleration)
+# ORBench v2 任务：Bellman-Ford SSSP（Request-Based GPU Service）
 
-## Objective
+你要实现的是 **GPU 版本的“服务式”最短路**：图只加载一次并常驻显存，然后处理多次查询（requests）。
 
-Given the CPU reference implementation below, write a CUDA program that computes the same result but runs faster on a GPU.
+本任务不再使用 `LLM_input.cu` 模板，也不需要写 `main()`。你只需要提供 3 个函数（见下）。
 
-## Algorithm Description
+---
 
-Bellman-Ford computes the shortest distances from a single source node to all other nodes in a weighted directed graph. The graph may have negative edge weights (but no negative cycles). The algorithm iteratively relaxes all edges until convergence: for each edge (u, v, w), if `dist[u] + w < dist[v]`, update `dist[v]`. The algorithm converges in at most `V-1` iterations, but can terminate early if no distances change in an iteration.
+## 输入数据布局（每个 size 一个目录）
 
-## CPU Reference Implementation
+`tasks/bellman_ford/data/<size>/`
 
-```c
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <time.h>
+- `input.bin`: 大输入（CSR 图结构），只在 `solution_setup()` 读入并 H2D（不计时）
+- `requests.txt`: N 行，每行一个查询（格式：`s t`，两个整数，空格分隔）
+- `expected_output.txt`: N 行，每行一个浮点数（s 到 t 的最短距离）
+- `cpu_time_ms.txt`: CPU baseline 处理全部 requests 的时间（毫秒）
 
-#define INF_VAL 1e30f
+---
 
-struct CSRGraph {
-    int num_nodes, num_edges;
-    int* row_offsets;    // size: num_nodes + 1
-    int* col_indices;    // size: num_edges
-    float* weights;      // size: num_edges
-};
+## 你需要实现的接口（只写这 3 个函数）
 
-void bellman_ford_cpu(const CSRGraph* g, int source, float* dist) {
-    for (int i = 0; i < g->num_nodes; i++) dist[i] = INF_VAL;
-    dist[source] = 0.0f;
-
-    for (int round = 0; round < g->num_nodes - 1; round++) {
-        int updated = 0;
-        for (int u = 0; u < g->num_nodes; u++) {
-            if (dist[u] >= INF_VAL) continue;
-            for (int idx = g->row_offsets[u]; idx < g->row_offsets[u + 1]; idx++) {
-                int v = g->col_indices[idx];
-                float nd = dist[u] + g->weights[idx];
-                if (nd < dist[v]) {
-                    dist[v] = nd;
-                    updated = 1;
-                }
-            }
-        }
-        if (!updated) break;
-    }
-}
-```
-
-## Input/Output Specification
-
-- **Graph format**: CSR (Compressed Sparse Row)
-  - `row_offsets[V+1]`: edge start indices for each node
-  - `col_indices[E]`: destination node for each edge
-  - `weights[E]`: edge weights (positive floats, range [1.0, 100.0])
-- **Source node**: 0
-- **Output**: `dist[V]` array, `dist[i]` = shortest distance from source to node i
-  - Unreachable nodes: `dist[i] = 1e30f`
-- **Input sizes**: The program will be tested with V=1000/E=5000, V=100000/E=500000, V=500000/E=2500000
-
-## Requirements
-
-Implement a `.cu` file with the following four functions (do NOT include `main()`):
+在你的 `solution.cu` 中实现：
 
 ```c
-// Called once. Read graph from data_dir/*.bin, allocate GPU memory.
-// Return the number of result floats (= number of nodes V).
-int gpu_setup(const char* data_dir);
+extern void solution_setup(const TaskData* data);
 
-// Run the GPU Bellman-Ford computation. Must be re-entrant:
-// reset distances each call (called multiple times for warmup + timing).
-void gpu_run();
+extern void solution_run(int num_requests, const char** requests,
+                         char** responses);
 
-// Copy the distance results from GPU to the output buffer.
-void gpu_get_results(float* output, int count);
-
-// Free GPU memory.
-void gpu_cleanup();
+extern void solution_cleanup();
 ```
 
-### Data files in `data_dir/`:
-- `input.txt`: first line is `V E source seed`
-- `row_offsets.bin`: `(V+1)` int32 values
-- `col_indices.bin`: `E` int32 values
-- `weights.bin`: `E` float32 values
+其中 `TaskData` / `Tensor` 与辅助函数定义在 `framework/orbench_io.h`（C 头文件）：
 
-### Compilation
-The framework compiles your code with a timing harness:
-```
-nvcc -O2 -arch=sm_89 harness.cu solution.cu -o solution
-```
-The harness provides `main()`, handles warmup (3 runs), timing (10 CUDA Event trials), and output.
+- `get_param(data, "V")`, `get_param(data, "E")`
+- `get_tensor_int(data, "row_offsets")`, `get_tensor_int(data, "col_indices")`
+- `get_tensor_float(data, "weights")`
 
-### Goal
-Optimize `gpu_run()` for maximum speedup over the CPU reference.
+**关键约束：**
+- `solution_setup/cleanup` 不计时；计时区间只包含 `solution_run`。
+- `distances[i]` 是单个浮点数，表示从 `s` 到 `t` 的最短距离。
+- `solution_run` 会被 warmup 与 timed trials 多次调用，必须避免重复分配/重复 H2D。
+
+---
+
+## request / response 格式
+
+### requests.txt（输入）
+每行一个 (s, t) 对，格式：`s t`（两个整数，空格分隔）
+
+```
+0 42
+10 99
+20 5
+```
+
+**说明**：s 分 10 组，每组 10 个不同的 s，每个 s 配 10 个不同的 t，共 100 条请求。
+
+### distances[i]（输出）
+**单个距离值**：s 到 t 的最短距离。
+
+- `distances[i]` 是一个 `float` 值
+- 表示从 `s` 到 `t` 的最短距离
+- 如果不可达，返回 `INF_VAL`（约 `1e30f`）
+- harness 会自动格式化为文本：`output.txt` 每行一个浮点数
+
+**重要**：不要计算整个距离数组、top-k、checksum 或手动格式化文本，这些会引入额外开销。只计算并返回 s 到 t 的距离值即可。
+
+校验模式由 `task.json` 定义：
+- `correctness.mode = "checksum"`
+- `correctness.field = "cs"`
+- `correctness.atol = 0.1`
+
+---
+
+## 编译方式（供你本地自测）
+
+GPU solution：
+
+```bash
+nvcc -O2 -arch=sm_89 -I framework/ framework/harness_gpu.cu solution.cu -o solution_gpu
+./solution_gpu tasks/bellman_ford/data/large --validate
+```
+
+---
+
+## 性能建议（L2，不给实现提示）
+
+目标是把 `solution_run()` 做到尽量薄：复用显存、批处理 requests、避免频繁 cudaMalloc/cudaFree、减少同步与 host-device 往返。
