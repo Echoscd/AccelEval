@@ -1,0 +1,37 @@
+{
+  "task_id": "npb_mg_vcycle",
+  "name": "NPB MG Structured Multigrid V-Cycle",
+  "category": "multigrid_solver",
+  "difficulty": 4,
+  "tags": ["stencil", "multigrid", "3d_grid", "poisson", "scientific_computing"],
+
+  "input_sizes": {
+    "small":  {"interior_n": 64,  "num_cycles": 4, "pre_smooth": 2, "post_smooth": 2, "coarse_iters": 20},
+    "medium": {"interior_n": 128, "num_cycles": 5, "pre_smooth": 2, "post_smooth": 2, "coarse_iters": 24},
+    "large":  {"interior_n": 192, "num_cycles": 6, "pre_smooth": 2, "post_smooth": 2, "coarse_iters": 28}
+  },
+
+  "correctness": {
+    "mode": "numeric",
+    "atol": 1e-6,
+    "rtol": 0.0
+  },
+
+  "timing": {
+    "warmup": 2,
+    "trials": 5,
+    "timeout": 240
+  },
+
+  "interface_mode": "init_compute",
+  "build_command": "",
+  "extra_build_flags": "",
+
+  "gpu_optimization_points": [
+    "3d_stencil_tiling",
+    "shared_memory_for_local_neighborhoods",
+    "kernel_fusion_for_smoother_and_residual",
+    "coarse_grid_parallel_restriction",
+    "prolongation_and_correction_fusion"
+  ]
+}

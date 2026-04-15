@@ -1,0 +1,37 @@
+{
+  "task_id": "rodinia_nw_alignment",
+  "name": "Rodinia Needleman-Wunsch Global Alignment",
+  "category": "bioinformatics",
+  "difficulty": 3,
+  "tags": ["dynamic_programming", "wavefront", "sequence_alignment", "BLOSUM62"],
+
+  "input_sizes": {
+    "small":  {"seq_len": 512,  "penalty": 10, "seed": 42},
+    "medium": {"seq_len": 2048, "penalty": 10, "seed": 42},
+    "large":  {"seq_len": 4096, "penalty": 10, "seed": 42}
+  },
+
+  "correctness": {
+    "mode": "exact",
+    "atol": 0.0,
+    "rtol": 0.0
+  },
+
+  "timing": {
+    "warmup": 3,
+    "trials": 10,
+    "timeout": 180
+  },
+
+  "interface_mode": "init_compute",
+  "build_command": "",
+  "extra_build_flags": "",
+
+  "gpu_optimization_points": [
+    "anti_diagonal_wavefront_parallelism",
+    "shared_memory_tile_staging",
+    "persistent_reference_matrix",
+    "coalesced_tile_updates",
+    "kernel_fusion_for_tile_phases"
+  ]
+}

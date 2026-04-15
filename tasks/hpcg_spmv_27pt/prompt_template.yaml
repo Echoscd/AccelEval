@@ -1,0 +1,18 @@
+task: hpcg_spmv_27pt
+summary: >
+  Implement a GPU solution for the HPCG reference sparse matrix-vector product.
+  The matrix comes from the official 27-point 3D stencil construction and is
+  provided in CSR format. Compute y = A x exactly.
+inputs:
+  - row_ptr: int32[n+1]
+  - col_idx: int32[nnz]
+  - values: float64[nnz]
+  - x: float64[n]
+  - params: nx, ny, nz, n, nnz
+output:
+  - y: float64[n]
+notes:
+  - Match the CPU reference semantics exactly.
+  - The matrix originates from the HPCG 27-point stencil generator.
+  - Use CSR semantics as provided; do not assume a dense matrix.
+  - Output must match the CPU reference within the configured numeric tolerance.

@@ -1,0 +1,23 @@
+task: hpcg_mg_vcycle
+summary: >
+  Implement a GPU solution for one HPCG-style multigrid V-cycle on a CSR matrix
+  generated from the official 27-point 3D stencil construction. The hierarchy is
+  geometric with three coarse levels, symmetric Gauss-Seidel pre/post smoothing,
+  injection restriction of the residual, and coarse correction prolongation.
+inputs:
+  - row_ptr: int32[n+1]
+  - col_idx: int32[nnz]
+  - values: float64[nnz]
+  - diag_idx: int32[n]
+  - rhs: float64[n]
+  - x_init: float64[n]
+  - params: nx, ny, nz, n, nnz, coarse_levels
+output:
+  - x: float64[n]
+notes:
+  - Match the CPU reference semantics exactly.
+  - Use the same 27-point stencil matrix structure as the official HPCG generator.
+  - Perform one V-cycle with one presmoothing SYMGS sweep and one postsmoothing SYMGS sweep per level.
+  - Restriction uses rc[i] = rf[f2c[i]] - Axf[f2c[i]].
+  - Prolongation adds the coarse correction back at the mapped fine-grid points.
+  - Output must match the CPU reference within the configured numeric tolerance.

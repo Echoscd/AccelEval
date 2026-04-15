@@ -1,0 +1,19 @@
+task: polybench_gemm
+summary: >
+  Implement a GPU solution for the PolyBench GEMM benchmark. Compute dense
+  matrix multiplication with accumulation: C = alpha * A * B + beta * C0.
+
+inputs:
+  - A: float32[ni*nk]
+  - B: float32[nk*nj]
+  - C0: float32[ni*nj]
+  - params: ni, nj, nk, alpha_milli, beta_milli
+
+output:
+  - C: float32[ni*nj]
+
+notes:
+  - Preserve row-major semantics exactly.
+  - Alpha and beta are provided as integers scaled by 1000.
+  - Output must match the CPU reference within the configured numeric tolerance.
+  - Dense GEMM should benefit from standard GPU tiling and accumulation strategies.

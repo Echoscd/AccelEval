@@ -1,0 +1,93 @@
+# PathFinder Grid Shortest-Path DP -- Prompt Template
+
+task_description: |
+  Given a weighted 2D grid `wall[rows][cols]`, compute the minimum path cost to every
+  destination column in the last row.
+
+  A path starts in the first row and moves one row downward at a time.
+  From column `c`, the next step may go to `c-1`, `c`, or `c+1` (subject to bounds).
+
+  Dynamic-programming recurrence:
+
+    DP[r][c] = wall[r][c] + min(DP[r-1][c-1], DP[r-1][c], DP[r-1][c+1])
+
+  Base case:
+
+    DP[0][c] = wall[0][c]
+
+  Output `out_costs[c] = DP[rows-1][c]` for all columns `c`.
+
+interface: |
+  ```c
+  extern "C" void solution_init(
+      int rows,
+      int cols,
+      const int* wall   // host, row-major, length rows*cols
+  );
+
+  extern "C" void solution_compute(
+      int* out_costs    // host, length cols
+  );
+
+  extern "C" void solution_free(void);
+  ```
+
+input_size_notes: |
+  - `wall` stores nonnegative integer costs in row-major order.
+  - **small**: rows=2048, cols=512
+  - **medium**: rows=8192, cols=1024
+  - **large**: rows=32768, cols=2048
+  - Output length is always `cols`.
+
+output_contract: |
+  - `out_costs[c]` must equal the minimum accumulated path cost ending at last-row column `c`.
+  - Output must match the CPU reference exactly (integer values; task uses `atol = 0`).
+  - `solution_compute` must be idempotent and synchronized before returning.
+
+algorithm_background: |
+  This is a classic row-wise wavefront DP.
+
+  Only the previous row is needed to compute the current row, so memory can be reduced from
+  O(rows*cols) to O(cols) using two buffers:
+
+    prev[c] = DP[r-1][c]
+    next[c] = DP[r][c]
+
+  For each row r >= 1 and column c:
+    best = prev[c]
+    if c > 0:        best = min(best, prev[c-1])
+    if c + 1 < cols: best = min(best, prev[c+1])
+    next[c] = wall[r*cols + c] + best
+
+  Then swap `prev` and `next`.
+
+hints_l2: |
+  - Keep `wall` on GPU persistently after `solution_init`.
+  - Use two device buffers for previous/current row costs.
+  - Launch one row-update kernel per row, with one thread per column.
+  - Copy only the final row back to host at the end.
+
+hints_l1: |
+  ### 1. Persistent device state
+  In `solution_init`, allocate device memory for `wall`, `prev`, and `next`, and copy `wall` to device once.
+
+  ### 2. Initialization
+  Initialize `prev[c] = wall[c]` from the first row.
+
+  ### 3. Row-update kernel
+  For each row `r` from 1 to `rows-1`, launch a kernel over columns:
+  - load `prev[c]`
+  - read `prev[c-1]` and `prev[c+1]` when valid
+  - compute the local minimum
+  - write `next[c] = wall[r*cols + c] + min_neighbor`
+
+  ### 4. Swap buffers
+  After each row, swap `prev` and `next` pointers.
+
+  ### 5. Shared-memory optimization
+  For better performance, tile columns into blocks and cache a tile of `prev` in shared memory,
+  including one halo element on each side.
+
+  ### 6. Launch-overhead reduction
+  Since there is one dependent step per row, reducing launch overhead may matter on large inputs.
+  Consider persistent kernels or CUDA Graphs only if correctness remains straightforward.

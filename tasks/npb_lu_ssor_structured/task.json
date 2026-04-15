@@ -1,0 +1,37 @@
+{
+  "task_id": "npb_lu_ssor_structured",
+  "name": "NPB LU Structured SSOR Sweep",
+  "category": "cfd_solver",
+  "difficulty": 4,
+  "tags": ["npb", "lu", "ssor", "structured_grid", "block_solve", "cfd"],
+
+  "input_sizes": {
+    "small":  {"n": 32, "iters": 6,  "omega_milli": 1100, "seed": 42},
+    "medium": {"n": 48, "iters": 8,  "omega_milli": 1100, "seed": 42},
+    "large":  {"n": 64, "iters": 10, "omega_milli": 1100, "seed": 42}
+  },
+
+  "correctness": {
+    "mode": "numeric",
+    "atol": 1e-7,
+    "rtol": 1e-7
+  },
+
+  "timing": {
+    "warmup": 2,
+    "trials": 5,
+    "timeout": 240
+  },
+
+  "interface_mode": "init_compute",
+  "build_command": "",
+  "extra_build_flags": "",
+
+  "gpu_optimization_points": [
+    "wavefront_or_colored_ssor_sweeps",
+    "3d_grid_tiling",
+    "register_cached_5x5_block_solve",
+    "kernel_fusion_of_neighbor_gather_and_local_solve",
+    "reduction_of_componentwise_residual_norms"
+  ]
+}

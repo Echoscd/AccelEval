@@ -1,0 +1,37 @@
+{
+  "task_id": "gapbs_triangle_orderedcount",
+  "name": "GAPBS Triangle Counting (OrderedCount)",
+  "category": "graph_analytics",
+  "difficulty": 3,
+  "tags": ["gapbs", "triangle_count", "orderedcount", "graph", "csr", "sorted_neighborhoods"],
+
+  "input_sizes": {
+    "small":  {"n": 32768,  "num_offsets": 16},
+    "medium": {"n": 131072, "num_offsets": 24},
+    "large":  {"n": 262144, "num_offsets": 28}
+  },
+
+  "correctness": {
+    "mode": "numeric",
+    "atol": 0,
+    "rtol": 0
+  },
+
+  "timing": {
+    "warmup": 1,
+    "trials": 3,
+    "timeout": 240
+  },
+
+  "interface_mode": "init_compute",
+  "build_command": "",
+  "extra_build_flags": "",
+
+  "gpu_optimization_points": [
+    "parallelize_intersections_over_oriented_edges",
+    "two_pointer_merge_intersection_on_sorted_csr_rows",
+    "load_balance_high_degree_vertices_with_warp_or_block_cooperation",
+    "edge_frontier_compaction_for_v_less_equal_u_orientation",
+    "reduce_triangle_partial_counts_with_block_level_accumulation"
+  ]
+}

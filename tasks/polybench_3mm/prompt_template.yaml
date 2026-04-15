@@ -1,0 +1,22 @@
+task: polybench_3mm
+summary: >
+  Implement a GPU solution for the PolyBench 3MM benchmark. Compute the
+  chained dense linear algebra kernel exactly as in the reference version:
+  E = A*B, F = C*D, then G = E*F.
+
+inputs:
+  - A: float32[ni*nk]
+  - B: float32[nk*nj]
+  - C: float32[nj*nm]
+  - D: float32[nm*nl]
+  - params: ni, nj, nk, nl, nm
+
+output:
+  - G: float32[ni*nl]
+
+notes:
+  - Preserve row-major semantics exactly.
+  - The computation must match PolyBench/C's 3MM structure: three GEMM stages.
+  - Output must match the CPU reference within the configured numeric tolerance.
+  - Good GPU strategies include tiled GEMM kernels, shared-memory reuse,
+    register blocking, and pipelining across stages.

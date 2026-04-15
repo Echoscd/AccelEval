@@ -1,0 +1,54 @@
+task_description: |
+  Given two encoded sequences of equal length and a positive gap penalty,
+  compute the Needleman-Wunsch global alignment score using the BLOSUM62
+  substitution matrix.
+
+interface: |
+  ```c
+  extern "C" void solution_init(
+      int seq_len,
+      int penalty,
+      const int* h_seq_a,
+      const int* h_seq_b
+  );
+
+  extern "C" void solution_compute(int* h_score_out);
+  extern "C" void solution_free(void);
+  ```
+
+output_contract: |
+  - `h_score_out[0]` must equal the optimal global alignment score.
+  - Exact integer match with CPU reference is required.
+  - `solution_compute` must synchronize before returning.
+
+algorithm_background: |
+  The benchmark fills a dynamic-programming table `dp[i][j]` with recurrence:
+
+    dp[i][j] = max(
+      dp[i-1][j-1] + BLOSUM62[seq_a[i-1]][seq_b[j-1]],
+      dp[i-1][j]   - penalty,
+      dp[i][j-1]   - penalty
+    )
+
+  Boundary conditions:
+  - `dp[i][0] = -i * penalty`
+  - `dp[0][j] = -j * penalty`
+
+  Rodinia processes the table in 16×16 blocks along anti-diagonals.
+
+hints_l2: |
+  - Precompute / copy sequences once in `solution_init`.
+  - Use anti-diagonal wavefront kernels over 16×16 tiles.
+  - Keep the DP table on device across repeated runs if possible.
+
+hints_l1: |
+  ### 1. Wavefront structure
+  Tiles on the same anti-diagonal are independent once the previous anti-diagonal
+  has finished.
+
+  ### 2. Shared-memory tiles
+  Load tile boundaries and local substitution scores into shared memory.
+
+  ### 3. Persistent data
+  Copy `seq_a`, `seq_b`, and any derived score/reference data in `solution_init`
+  and reuse them across timed runs.

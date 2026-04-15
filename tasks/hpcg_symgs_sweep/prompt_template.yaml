@@ -1,0 +1,21 @@
+task: hpcg_symgs_sweep
+summary: >
+  Implement a GPU solution for one HPCG-style symmetric Gauss-Seidel sweep on
+  a CSR matrix generated from the official 27-point 3D stencil construction.
+  The kernel must perform one forward sweep and one backward sweep using the
+  provided right-hand side and initial guess.
+inputs:
+  - row_ptr: int32[n+1]
+  - col_idx: int32[nnz]
+  - values: float64[nnz]
+  - diag_idx: int32[n]
+  - rhs: float64[n]
+  - x_init: float64[n]
+  - params: nx, ny, nz, n, nnz
+output:
+  - x: float64[n]
+notes:
+  - Match the CPU reference semantics exactly.
+  - Each row stores lower entries before the diagonal and upper entries after it.
+  - Perform exactly one forward sweep and one backward sweep.
+  - Output must match the CPU reference within the configured numeric tolerance.

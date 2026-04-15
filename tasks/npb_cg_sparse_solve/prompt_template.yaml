@@ -1,0 +1,20 @@
+task: npb_cg_sparse_solve
+summary: >
+  Implement a GPU solution for a sparse conjugate-gradient benchmark derived from
+  the NPB CG kernel. The task repeatedly applies CSR SpMV, dot-product reductions,
+  and vector updates to solve a sparse SPD linear system.
+
+inputs:
+  - row_ptr: int32[n+1]
+  - col_idx: int32[nnz]
+  - values: float64[nnz]
+  - b: float64[n]
+  - params: n, nnz, max_iters, tol_exp
+
+output:
+  - x: float64[n]
+
+notes:
+  - Preserve the CPU reference semantics.
+  - The dominant work is CSR SpMV plus global reductions.
+  - Avoid repeated host-device transfers inside the iteration loop.

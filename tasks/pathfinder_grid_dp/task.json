@@ -1,0 +1,37 @@
+{
+  "task_id": "pathfinder_grid_dp",
+  "name": "PathFinder Grid Shortest-Path DP",
+  "category": "dynamic_programming",
+  "difficulty": 2,
+  "tags": ["wavefront", "grid_traversal", "dynamic_programming", "stencil_like", "double_buffering"],
+  "interface_mode": "init_compute",
+
+  "input_sizes": {
+    "small":  {"rows": 2048,  "cols": 512,  "seed": 9},
+    "medium": {"rows": 8192,  "cols": 1024, "seed": 9},
+    "large":  {"rows": 32768, "cols": 2048, "seed": 9}
+  },
+
+  "correctness": {
+    "mode": "numerical",
+    "atol": 0.0,
+    "rtol": 0.0
+  },
+
+  "timing": {
+    "warmup": 3,
+    "trials": 10,
+    "timeout": 180
+  },
+
+  "build_command": "",
+  "extra_build_flags": "",
+
+  "gpu_optimization_points": [
+    "persistent_grid_copy",
+    "rowwise_parallel_relaxation",
+    "double_buffering",
+    "shared_memory_halo_tiling",
+    "kernel_launch_overhead_reduction"
+  ]
+}

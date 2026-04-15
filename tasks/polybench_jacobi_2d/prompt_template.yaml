@@ -1,0 +1,21 @@
+task: polybench_jacobi_2d
+summary: >
+  Implement a GPU solution for the PolyBench Jacobi-2D benchmark. Update the
+  2-D grid exactly as in the reference kernel, alternating A->B and then B->A
+  with a five-point stencil for each outer iteration.
+
+inputs:
+  - A0: float32[n*n]
+  - B0: float32[n*n]
+  - params: n, tsteps
+
+output:
+  - A: float32[n*n]
+
+notes:
+  - Preserve row-major semantics exactly.
+  - Each outer iteration performs two stencil sweeps, matching PolyBench/C.
+  - Boundary values remain unchanged.
+  - Output must match the CPU reference within the configured numeric tolerance.
+  - Good GPU strategies include 2-D thread blocks, shared-memory tiling, and
+    double-buffering of A/B.

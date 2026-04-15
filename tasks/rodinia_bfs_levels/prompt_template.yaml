@@ -1,0 +1,67 @@
+task_description: |
+  Run level-synchronous breadth-first search on an unweighted graph stored in Rodinia-style
+  node metadata plus a flat edge list.
+
+  Each node `u` has `node_start[u]` and `node_degree[u]`, and its outgoing neighbors are stored in
+  `edge_dst[node_start[u] : node_start[u] + node_degree[u]]`.
+  Starting from `source`, compute the BFS hop distance to every node.
+
+interface: |
+  ```c
+  extern "C" void solution_init(
+      int num_nodes,
+      int num_edges,
+      int source,
+      const int* node_start,
+      const int* node_degree,
+      const int* edge_dst
+  );
+
+  extern "C" void solution_compute(
+      int* out_dist   // host, length num_nodes
+  );
+
+  extern "C" void solution_free(void);
+  ```
+
+input_size_notes: |
+  - `node_start` and `node_degree` are length `num_nodes`.
+  - `edge_dst` is length `num_edges`.
+  - **small**: 20k nodes, avg degree 6
+  - **medium**: 100k nodes, avg degree 8
+  - **large**: 250k nodes, avg degree 8
+
+output_contract: |
+  - Output one integer BFS distance per node.
+  - Unreachable nodes must be `-1`.
+  - Output format is one integer per line.
+  - Correctness mode is exact.
+
+algorithm_background: |
+  This is the classical Rodinia mask-based BFS pattern.
+  Maintain three arrays: current frontier, next frontier, and visited.
+  Repeatedly scan active frontier nodes, relax their outgoing neighbors, and build the next frontier
+  until no new node is discovered.
+
+hints_l2: |
+  - Keep graph arrays on device after `solution_init`.
+  - Parallelize over frontier nodes or over all nodes with a frontier mask.
+  - Use a compact frontier queue or bitmap to reduce wasted work.
+  - Reduce host-device synchronization inside the BFS loop.
+
+hints_l1: |
+  ### 1. Persistent device allocations
+  Allocate device copies of `node_start`, `node_degree`, `edge_dst`, frontier arrays, visited arrays,
+  and distance output in `solution_init`.
+
+  ### 2. Frontier expansion
+  The Rodinia version scans all nodes and expands only active ones. A compact frontier queue may be faster.
+
+  ### 3. Neighbor processing
+  For each active node `u`, iterate from `node_start[u]` to `node_start[u] + node_degree[u]`.
+
+  ### 4. Next-frontier update
+  Mark newly discovered neighbors and assign `dist[v] = dist[u] + 1` exactly once.
+
+  ### 5. Final copy-back
+  Copy the distance array to `out_dist` after traversal completes.
