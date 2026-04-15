@@ -1,0 +1,49 @@
+{
+  "task_id": "max_flow_push_relabel",
+  "name": "Push-Relabel Maximum Flow (Goldberg-Tarjan)",
+  "category": "graph",
+  "difficulty": 3,
+  "tags": [
+    "max_flow",
+    "push_relabel",
+    "network_flow",
+    "graph",
+    "preflow"
+  ],
+  "interface_mode": "init_compute",
+  "input_sizes": {
+    "small": {
+      "num_nodes": 1000,
+      "num_arcs": 5000,
+      "seed": 42
+    },
+    "medium": {
+      "num_nodes": 10000,
+      "num_arcs": 50000,
+      "seed": 42
+    },
+    "large": {
+      "num_nodes": 50000,
+      "num_arcs": 250000,
+      "seed": 42
+    }
+  },
+  "correctness": {
+    "mode": "exact",
+    "atol": 0,
+    "rtol": 0
+  },
+  "timing": {
+    "warmup": 3,
+    "trials": 10,
+    "timeout": 300
+  },
+  "build_command": "",
+  "extra_build_flags": "",
+  "gpu_optimization_points": [
+    "parallel_bfs_global_update",
+    "atomic_push_on_active_nodes",
+    "warp_level_discharge",
+    "parallel_relabel"
+  ]
+}

@@ -1,0 +1,151 @@
+# miniWeather — Prompt Template
+
+task_description: |
+  Simulate 2D dry, stratified, compressible, non-hydrostatic fluid dynamics using the
+  finite-volume method with Strang-split dimensional splitting and 3-stage Runge-Kutta
+  time integration.
+
+  The simulation tracks 4 fluid state variables (density perturbation, x-momentum,
+  z-momentum, density×potential_temperature perturbation) on a 2D grid with periodic
+  x-boundaries and solid wall z-boundaries.
+
+  Your GPU implementation must produce the same d_mass (relative mass change) and d_te
+  (relative total energy change) as the CPU reference, validating conservation laws:
+  - |d_mass| should be < 1e-9 (mass conservation)
+  - d_te should be negative (energy dissipation from hyperviscosity)
+  - |d_te| should be < 1e-4
+
+interface: |
+  ```c
+  // compute_only interface: ALL work happens here.
+  // The entire function is timed.
+  extern "C" void solution_compute(
+      int nx_in,          // grid cells in x-direction
+      int nz_in,          // grid cells in z-direction
+      int sim_time_in,    // simulation duration in seconds (integer)
+      int data_spec_in,   // initial condition type (2 = rising thermal)
+      double* output      // HOST, [6], output array:
+                          //   output[0] = d_mass = (mass_final - mass0) / mass0
+                          //   output[1] = d_te   = (te_final - te0) / te0
+                          //   output[2] = L2 norm of density perturbation field
+                          //   output[3] = L2 norm of x-momentum field
+                          //   output[4] = L2 norm of z-momentum field
+                          //   output[5] = L2 norm of rho*theta perturbation field
+  );
+
+  // Optional: release GPU resources.
+  extern "C" void solution_free(void);
+  ```
+
+  **L2 norm computation** (after the simulation ends):
+  ```c
+  // For each of the 4 state variables (DENS, UMOM, WMOM, RHOT):
+  double l2 = 0;
+  for (k = 0; k < nz; k++)
+      for (i = 0; i < nx; i++) {
+          double val = state[var*(nz+4)*(nx+4) + (k+2)*(nx+4) + (i+2)];
+          l2 += val * val;
+      }
+  l2 = sqrt(l2);
+  ```
+
+input_size_notes: |
+  - **small**: NX=100, NZ=50, SIM_TIME=400s → 5K cells, ~600 timesteps
+  - **medium**: NX=800, NZ=400, SIM_TIME=200s → 320K cells, ~1200 timesteps
+  - **large**: NX=2000, NZ=1000, SIM_TIME=100s → 2M cells, ~1500 timesteps
+  - Domain: 20km × 10km, dx=xlen/NX, dz=zlen/NZ
+  - dt = min(dx,dz) / 450 * 1.5 (CFL condition)
+  - State array: (NX+4) × (NZ+4) × 4 variables (double precision, halo=2)
+  - DATA_SPEC=2: Rising warm thermal bubble (most common test case)
+  - No external input data — the simulation generates its own initial conditions
+
+output_contract: |
+  - `output[0]` = d_mass: relative mass change, should be ≈0 (mass conservation)
+  - `output[1]` = d_te: relative total energy change, should be small negative
+  - `output[2..5]` = L2 norms of the 4 state variable fields (density, umom, wmom, rhot)
+  - Tolerance: `atol=1e-4, rtol=0.1` (accounts for GPU reduction ordering)
+  - `solution_compute` must **synchronize** before returning
+  - All output pointers are HOST
+
+algorithm_background: |
+  **miniWeather Numerical Method**
+
+  This is a 2D Euler equations solver for atmospheric flows:
+
+  State variables per cell: (ρ', ρu, ρw, ρθ') where ' denotes perturbation from
+  hydrostatic background.
+
+  **Time Integration**: 3-stage Runge-Kutta with Strang splitting:
+  ```
+  For each timestep (alternating x-first and z-first):
+    RK stage 1: q* = q_n + dt/3 * rhs(q_n)
+    RK stage 2: q** = q_n + dt/2 * rhs(q*)
+    RK stage 3: q_{n+1} = q_n + dt * rhs(q**)
+  ```
+  Each direction (x, z) gets 3 RK stages → 6 semi_discrete_step calls per timestep.
+
+  **Spatial Discretization**: 4th-order finite-volume reconstruction:
+  ```
+  val = -stencil[0]/12 + 7*stencil[1]/12 + 7*stencil[2]/12 - stencil[3]/12
+  ```
+  Plus 3rd-order hyperviscosity for stability:
+  ```
+  d3 = -stencil[0] + 3*stencil[1] - 3*stencil[2] + stencil[3]
+  hv_coef = -hv_beta * dx / (16*dt)
+  flux = physical_flux - hv_coef * d3
+  ```
+
+  **Equation of State**: P = C0 * (ρθ)^γ where γ = cp/rd ≈ 1.4
+
+  **Boundary Conditions**:
+  - X: Periodic (wrap halo from opposite side)
+  - Z: Solid wall (w=0 at top/bottom, extrapolate other variables)
+
+  **Hydrostatic Background**: Precomputed 1D profiles (hy_dens, hy_dens_theta,
+  hy_pressure) used to split state into background + perturbation.
+
+  **Initial Conditions** (DATA_SPEC=2, rising thermal):
+  ```
+  Background: constant θ₀=300K, hydrostatic balance
+  Perturbation: cosine-squared warm bubble at (xlen/2, 2000m), radius 2000m, amp +3K
+  ```
+
+  **Conservation Diagnostics**:
+  ```
+  mass = Σ (ρ_total) * dx * dz
+  te = Σ (KE + IE) * dx * dz    where KE = ρ(u²+w²), IE = ρ·cv·T
+  T = θ / (p0/p)^(rd/cp)        (true temperature from potential temperature)
+  ```
+
+hints_l2: |
+  - Main parallelism: 2D grid loops in compute_tendencies_x/z → one CUDA thread per (i,k)
+  - 6 kernel launches per timestep (3 RK stages × 2 directions)
+  - Halo exchange is local (periodic x, wall z) — no MPI needed
+  - State arrays are double precision — watch for register pressure
+  - Reduction (mass, energy) only needed at start and end, not every timestep
+  - Consider fusing flux computation and tendency update into one kernel
+
+hints_l1: |
+  ### Key Kernels to Parallelize
+
+  1. **compute_tendencies_x**: `parallel_for(nz, nx+1)` for flux, `parallel_for(nz, nx)` for tendency
+  2. **compute_tendencies_z**: `parallel_for(nz+1, nx)` for flux, `parallel_for(nz, nx)` for tendency
+  3. **semi_discrete_step**: `parallel_for(nz, nx, NUM_VARS)` for state update
+  4. **set_halo_values_x**: `parallel_for(nz, NUM_VARS)` — only 2 halo cells per side
+  5. **set_halo_values_z**: `parallel_for(nx+4, NUM_VARS)` — only 2 halo cells per side
+  6. **reductions**: `parallel_for(nz, nx)` with parallel sum reduction
+
+  ### Memory Layout
+  State array: `state[var*(nz+4)*(nx+4) + (k+2)*(nx+4) + (i+2)]`
+  4 variables × (nx+4) × (nz+4) doubles — fits in GPU global memory for all sizes.
+
+  ### Optimization Opportunities
+  - **Shared memory for stencil**: Each thread loads 4 neighbors → use shared memory tile
+  - **Kernel fusion**: Combine flux computation + tendency update into one kernel
+  - **Double buffer**: state and state_tmp already exist — ping-pong between them
+  - **Persistent kernel**: All timesteps in one kernel with grid-level sync
+  - **Hydrostatic arrays in constant memory**: hy_dens_cell etc. are small 1D arrays (nz+4)
+
+  ### Initialization on GPU
+  The init (Gauss-Legendre quadrature) is O(nx*nz*9) and can be parallelized.
+  Hydrostatic profiles are O(nz) — small, can stay on CPU and upload.

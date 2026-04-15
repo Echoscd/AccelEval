@@ -28,12 +28,9 @@ def data_exists(data_dir: str) -> bool:
     return all(os.path.exists(os.path.join(data_dir, f)) for f in required)
 
 
-def validate_output(task_id: str, data_dir: str, num_requests: int = 0) -> tuple:
+def validate_output(task_id: str, data_dir: str, num_requests: int) -> tuple:
     """
     Compare output.txt vs expected_output.txt. No execution.
-
-    If num_requests is 0 or not provided, the expected line count is inferred
-    from expected_output.txt (supports tasks without a fixed num_requests).
 
     Returns:
         (passed: bool, message: str)
@@ -47,31 +44,37 @@ def validate_output(task_id: str, data_dir: str, num_requests: int = 0) -> tuple
     if not os.path.exists(expected_txt):
         return False, "expected_output.txt not found"
 
+    def _parse_floats(path):
+        """Parse all floats from a file, supporting multiple values per line."""
+        vals = []
+        with open(path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                for tok in line.split():
+                    vals.append(float(tok))
+        return vals
+
     try:
-        with open(output_txt, "r") as f:
-            actual = [float(line.strip()) for line in f if line.strip()]
-        with open(expected_txt, "r") as f:
-            expected = [float(line.strip()) for line in f if line.strip()]
+        actual = _parse_floats(output_txt)
+        expected = _parse_floats(expected_txt)
     except Exception as ex:
         return False, f"Failed to read output files: {ex}"
 
-    # Infer num_requests from expected_output if not explicitly provided
-    if num_requests <= 0:
-        num_requests = len(expected)
-
-    if len(actual) != num_requests or len(expected) != num_requests:
+    if len(actual) != len(expected):
         return False, (
-            f"Line count mismatch: got {len(actual)}, expected {len(expected)} "
-            f"(num_requests={num_requests})"
+            f"Value count mismatch: got {len(actual)}, expected {len(expected)}"
         )
 
     atol = task.atol if task.atol is not None else 0.1
-    for r in range(num_requests):
-        if not np.isclose(actual[r], expected[r], atol=atol, equal_nan=True):
-            diff = abs(actual[r] - expected[r])
+    rtol = task.rtol if task.rtol is not None else 0.01
+    for i in range(len(expected)):
+        if not np.isclose(actual[i], expected[i], atol=atol, rtol=rtol, equal_nan=True):
+            diff = abs(actual[i] - expected[i])
             return False, (
-                f"request {r}: diff {diff:.6e} > {atol} "
-                f"(got {actual[r]:.6e}, expected {expected[r]:.6e})"
+                f"value {i}: diff {diff:.6e} > atol={atol}, rtol={rtol} "
+                f"(got {actual[i]:.6e}, expected {expected[i]:.6e})"
             )
 
     return True, "PASS"
@@ -158,9 +161,19 @@ def validate_solution(
 
         num_requests = int(size_params.get("num_requests", 0))
         if num_requests <= 0:
-            result.results_by_size[size_name] = False
-            result.error += f"Invalid num_requests for size '{size_name}'. "
-            continue
+            # Infer from requests.txt or expected_output.txt
+            req_txt = os.path.join(data_dir, "requests.txt")
+            exp_txt = os.path.join(data_dir, "expected_output.txt")
+            if os.path.exists(req_txt):
+                with open(req_txt) as _f:
+                    num_requests = sum(1 for line in _f if line.strip())
+            elif os.path.exists(exp_txt):
+                with open(exp_txt) as _f:
+                    num_requests = sum(1 for line in _f if line.strip())
+            else:
+                num_requests = 1
+        if num_requests <= 0:
+            num_requests = 1
 
         output_txt = os.path.join(data_dir, "output.txt")
         if os.path.exists(output_txt):

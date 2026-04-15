@@ -588,3 +588,163 @@ def analyze_diffs_for_run(
         print(f"[DIFF] Global diffs saved to {global_path}")
 
     return all_diffs
+
+
+# ---------------------------------------------------------------------------
+#  Direct diff: skip kb_analysis.json, build from agent_progress.jsonl
+# ---------------------------------------------------------------------------
+
+def analyze_diffs_direct(
+    run_dir: str,
+    knowledge_base,
+    task_filter: str | None = None,
+    enable_agent: bool = True,
+    agent_model_id: str = "gemini-3.1-pro-preview-openrouter",
+    llm_client=None,
+) -> list[DiffRecord]:
+    """
+    Analyze pairwise diffs directly from .cu files + agent_progress.jsonl.
+    No kb_analysis.json needed.
+
+    If task_filter is set, only analyze that task subdirectory.
+    """
+    run_name = os.path.basename(run_dir)
+
+    # Discover tasks
+    task_dirs = []
+    for name in sorted(os.listdir(run_dir)):
+        path = os.path.join(run_dir, name)
+        if not os.path.isdir(path):
+            continue
+        if task_filter and name != task_filter:
+            continue
+        progress = os.path.join(path, "agent_progress.jsonl")
+        if os.path.exists(progress):
+            task_dirs.append((name, path))
+
+    if not task_dirs:
+        print(f"[DIFF-DIRECT] No tasks found in {run_dir}" +
+              (f" (filter={task_filter})" if task_filter else ""))
+        return []
+
+    all_diffs: list[DiffRecord] = []
+
+    for task_id, task_path in task_dirs:
+        # Parse agent_progress.jsonl to get per-turn metrics
+        progress_file = os.path.join(task_path, "agent_progress.jsonl")
+        turns: dict[int, dict] = {}
+        model_id = ""
+        with open(progress_file) as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                rec = json.loads(line)
+                if not model_id and rec.get("model_id"):
+                    model_id = rec["model_id"]
+                if rec.get("event") == "turn_done":
+                    t = rec["turn"]
+                    if rec.get("compiled") and rec.get("correct"):
+                        spd = rec.get("speedup_e2e")
+                        kt = rec.get("kernel_time_ms")
+                        # Skip turns with invalid metrics (null, negative, zero)
+                        if not spd or spd <= 0 or not kt or kt <= 0:
+                            continue
+                        cu_path = os.path.join(task_path, f"agent_r{rec.get('rep', 0)}_t{t}.cu")
+                        if os.path.exists(cu_path):
+                            turns[t] = {
+                                "sample_id": t,
+                                "source_path": cu_path,
+                                "speedup_e2e": spd,
+                                "kernel_time_ms": kt,
+                                "matched_patterns": [],
+                                "auto_features": {},
+                            }
+
+        # Sort by turn and build adjacent pairs
+        sorted_turns = [turns[t] for t in sorted(turns.keys())]
+        if len(sorted_turns) < 2:
+            print(f"[DIFF-DIRECT] {task_id}: only {len(sorted_turns)} valid turns, skipping")
+            continue
+
+        pairs = [(sorted_turns[i], sorted_turns[i + 1]) for i in range(len(sorted_turns) - 1)]
+        print(f"[DIFF-DIRECT] {task_id}: {len(pairs)} pairs to analyze "
+              f"({len(sorted_turns)} valid turns out of {len(turns) + (len(set(range(max(turns.keys())+1)) - set(turns.keys())) if turns else 0)})")
+
+        for sample_a, sample_b in pairs:
+            sid_a = sample_a["sample_id"]
+            sid_b = sample_b["sample_id"]
+            spd_a = sample_a["speedup_e2e"]
+            spd_b = sample_b["speedup_e2e"]
+            print(f"  [DIFF] {task_id} t{sid_a} ({spd_a:.1f}x) -> t{sid_b} ({spd_b:.1f}x)...")
+
+            if not enable_agent:
+                ratio = spd_b / max(spd_a, 0.001)
+                direction = "improvement" if ratio > 1.1 else ("regression" if ratio < 0.9 else "neutral")
+                diff = DiffRecord(
+                    diff_id=_next_diff_id(),
+                    task_id=task_id,
+                    version_a_id=f"t{sid_a}",
+                    version_a_path=sample_a["source_path"],
+                    version_a_speedup=spd_a,
+                    version_a_kernel_time_ms=sample_a["kernel_time_ms"],
+                    version_b_id=f"t{sid_b}",
+                    version_b_path=sample_b["source_path"],
+                    version_b_speedup=spd_b,
+                    version_b_kernel_time_ms=sample_b["kernel_time_ms"],
+                    code_a=_read_source(sample_a["source_path"], max_chars=50000),
+                    code_b=_read_source(sample_b["source_path"], max_chars=50000),
+                    speedup_ratio=ratio,
+                    kernel_time_ratio=(sample_b["kernel_time_ms"] or 1) / max(sample_a["kernel_time_ms"] or 1, 0.001),
+                    direction=direction,
+                    pattern_changes=[],
+                    unchanged_patterns=[],
+                    new_candidates=[],
+                    causal_chains=[],
+                    agent_summary="(agent disabled)",
+                    model_id=model_id,
+                    run_name=run_name,
+                    timestamp=_now_ts(),
+                )
+                all_diffs.append(diff)
+                continue
+
+            try:
+                diff = generate_diff(
+                    task_id=task_id,
+                    sample_a=sample_a,
+                    sample_b=sample_b,
+                    kb=knowledge_base,
+                    model_id=model_id,
+                    run_name=run_name,
+                    llm_client=llm_client,
+                    agent_model_id=agent_model_id,
+                )
+                all_diffs.append(diff)
+                n_changes = len(diff.pattern_changes)
+                n_chains = len(diff.causal_chains)
+                print(f"    {diff.direction} ({diff.speedup_ratio:.2f}x): "
+                      f"{n_changes} pattern changes, {n_chains} causal chains")
+            except Exception as e:
+                print(f"    FAILED: {e}")
+
+    # Save diffs
+    if all_diffs:
+        suffix = f"_{task_filter}" if task_filter else ""
+        diffs_path = os.path.join(run_dir, f"kb_diffs_direct{suffix}.json")
+        with open(diffs_path, "w") as f:
+            json.dump([asdict(d) for d in all_diffs], f, indent=2, ensure_ascii=False)
+        print(f"\n[DIFF-DIRECT] Saved {len(all_diffs)} diffs to {diffs_path}")
+
+        # Also append to global diffs JSONL
+        global_diffs_dir = os.path.join(
+            os.path.dirname(os.path.dirname(run_dir)),
+            "Library", "knowledge_data", "diffs"
+        )
+        os.makedirs(global_diffs_dir, exist_ok=True)
+        global_path = os.path.join(global_diffs_dir, f"{run_name}{suffix}.diffs.jsonl")
+        with open(global_path, "w") as f:
+            for d in all_diffs:
+                f.write(json.dumps(asdict(d), ensure_ascii=False) + "\n")
+        print(f"[DIFF-DIRECT] Global diffs saved to {global_path}")
+
+    return all_diffs

@@ -33,6 +33,9 @@ interface: |
   );
   ```
 
+  You MUST implement both `solution_init` and `solution_compute`.
+  (`solution_free` is optional — the framework provides a no-op default.)
+
 input_size_notes: |
   | Size   | N (paths)    |
   |--------|-------------|

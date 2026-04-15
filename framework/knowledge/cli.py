@@ -139,6 +139,69 @@ def cmd_diff_analyze(args):
             print(f"    {d.agent_summary[:150]}")
 
 
+def cmd_breakdown(args):
+    """Run pattern breakdown analysis on a diff."""
+    from framework.knowledge.breakdown import run_breakdown_from_diffs
+
+    # Find diffs file
+    diffs_path = args.diffs
+    if not os.path.isabs(diffs_path):
+        # Try run_dir relative path
+        candidate = _ORBENCH_ROOT / "runs" / diffs_path
+        if candidate.exists():
+            diffs_path = str(candidate)
+        else:
+            # Try Library/knowledge_data/diffs/
+            candidate2 = _ORBENCH_ROOT / "Library" / "knowledge_data" / "diffs" / diffs_path
+            if candidate2.exists():
+                diffs_path = str(candidate2)
+
+    if not os.path.exists(diffs_path):
+        print(f"ERROR: Diffs file not found: {diffs_path}")
+        sys.exit(1)
+
+    kb = KnowledgeBase()
+    results = run_breakdown_from_diffs(
+        diffs_path=diffs_path,
+        diff_id=args.diff_id,
+        task_id=args.task,
+        kb=kb,
+        agent_model_id=args.agent_model,
+        run_eval=not args.no_eval,
+    )
+    print(f"\n[BREAKDOWN] Completed {len(results)} breakdown(s)")
+
+
+def cmd_diff_direct(args):
+    """Analyze pairwise diffs directly from .cu + agent_progress.jsonl, no analyze-run needed."""
+    from framework.knowledge.diff_analysis import analyze_diffs_direct
+
+    run_dir = args.run_dir
+    if not os.path.isabs(run_dir):
+        run_dir = str(_ORBENCH_ROOT / "runs" / run_dir)
+
+    if not os.path.isdir(run_dir):
+        print(f"ERROR: Run directory not found: {run_dir}")
+        sys.exit(1)
+
+    kb = KnowledgeBase()
+    diffs = analyze_diffs_direct(
+        run_dir,
+        knowledge_base=kb,
+        task_filter=args.task,
+        enable_agent=not args.no_agent,
+        agent_model_id=args.agent_model,
+    )
+
+    print(f"\n=== Diff Summary ===")
+    for d in diffs:
+        n_changes = len(d.pattern_changes)
+        print(f"  {d.diff_id}: {d.task_id} {d.version_a_id}->{d.version_b_id} "
+              f"{d.direction} ({d.speedup_ratio:.2f}x) {n_changes} changes")
+        if d.agent_summary:
+            print(f"    {d.agent_summary[:150]}")
+
+
 def cmd_diff_status(args):
     """Show summary of all collected diffs."""
     diffs_dir = _ORBENCH_ROOT / "Library" / "knowledge_data" / "diffs"
@@ -225,6 +288,28 @@ def main():
     p_diff.add_argument("--no-agent", action="store_true",
                         help="Skip LLM agent, only record deltas")
 
+    p_breakdown = sub.add_parser("breakdown",
+        help="Decompose a diff into incremental pattern steps with eval")
+    p_breakdown.add_argument("diffs", help="Path to diffs .jsonl or .json file")
+    p_breakdown.add_argument("--diff-id", default=None,
+                             help="Only breakdown this specific diff (e.g., DIFF-0001)")
+    p_breakdown.add_argument("--task", default=None,
+                             help="Only breakdown diffs for this task")
+    p_breakdown.add_argument("--agent-model", default="gemini-3.1-pro-preview-openrouter",
+                             help="Model for code generation")
+    p_breakdown.add_argument("--no-eval", action="store_true",
+                             help="Skip compilation and benchmarking (only generate code)")
+
+    p_diff_direct = sub.add_parser("diff-direct",
+        help="Direct pairwise diff from .cu + progress (no analyze-run needed)")
+    p_diff_direct.add_argument("run_dir", help="Run directory")
+    p_diff_direct.add_argument("--task", default=None,
+                               help="Only analyze this task (e.g., network_rm_dp)")
+    p_diff_direct.add_argument("--agent-model", default="gemini-3.1-pro-preview-openrouter",
+                               help="Model for diff agent")
+    p_diff_direct.add_argument("--no-agent", action="store_true",
+                               help="Skip LLM agent, only record deltas")
+
     sub.add_parser("diff-status", help="Show pairwise diff summary")
 
     p_export = sub.add_parser("export", help="Export KB")
@@ -240,8 +325,12 @@ def main():
         cmd_analyze_run(args)
     elif args.command == "promote":
         cmd_promote(args)
+    elif args.command == "breakdown":
+        cmd_breakdown(args)
     elif args.command == "diff-analyze":
         cmd_diff_analyze(args)
+    elif args.command == "diff-direct":
+        cmd_diff_direct(args)
     elif args.command == "diff-status":
         cmd_diff_status(args)
     elif args.command == "export":

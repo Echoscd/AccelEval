@@ -1,0 +1,68 @@
+# Push-Relabel Maximum Flow -- Prompt Template
+
+task_description: |
+  Compute the maximum flow in a directed network from source to sink using
+  the push-relabel (preflow-push) algorithm of Goldberg and Tarjan (1986).
+
+  Given a directed graph G=(V,E) with arc capacities, find the maximum amount
+  of flow that can be sent from source to sink without exceeding any arc capacity.
+
+  Based on Google OR-Tools GenericMaxFlow (ortools/graph/generic_max_flow.h).
+
+interface: |
+  ```c
+  extern "C" void solution_init(
+      int          num_nodes,
+      int          num_arcs,       // E directed arcs
+      const int*   tails,          // [E] tail of each arc
+      const int*   heads,          // [E] head of each arc
+      const int*   caps,           // [E] capacity of each arc
+      int          source,
+      int          sink
+  );
+
+  // Compute max flow. Output is a single integer.
+  extern "C" void solution_compute(int num_nodes, int* max_flow_out);
+  ```
+
+input_size_notes: |
+  | Size   | nodes   | arcs    |
+  |--------|---------|---------|
+  | small  | 1,000   | 5,000   |
+  | medium | 10,000  | 50,000  |
+  | large  | 100,000 | 500,000 |
+
+output_contract: |
+  - `max_flow_out[0]` = maximum flow value (integer, exact match)
+  - `solution_compute` must be idempotent and synchronize before returning
+
+algorithm_background: |
+  **Push-Relabel (Goldberg-Tarjan)**
+
+  Maintains a "preflow" (excess allowed at nodes) and node "heights".
+  Core operations:
+  - **Push**: if node has excess and an admissible arc (head height = node height - 1,
+    residual capacity > 0), push flow along the arc.
+  - **Relabel**: if node has excess but no admissible arc, increase height to
+    1 + min(height of neighbors with residual capacity).
+  - **Discharge**: repeatedly push or relabel a node until its excess is zero
+    or its height exceeds num_nodes.
+
+  Global update heuristic: periodic BFS from sink in reverse residual graph
+  to recompute optimal heights. This is the dominant cost for large sparse graphs.
+
+  Complexity: O(V^2 * sqrt(E)) with highest-label selection.
+
+hints_l2: |
+  - Parallel BFS for GlobalUpdate (level-synchronous BFS on GPU)
+  - Parallel push: multiple active nodes can push simultaneously with atomics
+  - Parallel relabel: independent for non-adjacent active nodes
+  - Upload graph structure (CSR adjacency + arc arrays) to device once
+
+hints_l1: |
+  ### GPU Strategy
+  1. Store graph in CSR on device (adj_start, adj_list, head, opposite, residual)
+  2. GlobalUpdate as parallel BFS (frontier expansion with atomics)
+  3. Discharge phase: process active nodes in parallel with atomicAdd for excess
+     and atomicSub for residual capacity
+  4. Repeat GlobalUpdate + parallel Discharge until no active nodes

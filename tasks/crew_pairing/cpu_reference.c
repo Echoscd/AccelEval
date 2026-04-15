@@ -1,4 +1,5 @@
 // cpu_reference.c -- crew_pairing CPU baseline (SPPRC + Greedy Set Cover)
+// Faithfully ported from HeuriGym (cornell-zhang/heurigym)
 //
 // Two-phase algorithm similar to column generation:
 //   Phase 1: For each starting leg, use SPPRC (Shortest Path with Resource

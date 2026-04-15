@@ -26,9 +26,10 @@ from .task import load_task, get_task_dir, TaskConfig
 # ═══════════════════════════════════════════════════════════════
 
 GENERIC_CONSTRAINTS_INIT_COMPUTE = """\
-- Both functions use `extern "C"` linkage
+- All functions use `extern "C"` linkage
 - All parameters to `solution_compute` are **host pointers**; you manage H2D/D2H yourself
 - Do NOT call `cudaMalloc` inside `solution_compute` (it is called repeatedly); allocate in `solution_init`
+- `solution_free` is optional (the framework provides a weak no-op default)
 - Do NOT use any file I/O (`fopen`, `printf`, `fprintf`, etc.)
 - Unreachable / invalid results use `1e30f`"""
 
@@ -36,7 +37,7 @@ GENERIC_CONSTRAINTS_COMPUTE_ONLY = """\
 - All functions use `extern "C"` linkage
 - All parameters to `solution_compute` are **host pointers**; you manage H2D/D2H yourself
 - There is NO `solution_init`; do ALL work inside `solution_compute` (including `cudaMalloc`, H2D, kernels, D2H)
-- You must also implement `void solution_free(void)` to release any persistent resources
+- `solution_free` is optional (the framework provides a weak no-op default)
 - Do NOT use any file I/O (`fopen`, `printf`, `fprintf`, etc.)
 - Unreachable / invalid results use `1e30f`"""
 
@@ -171,9 +172,20 @@ def generate_prompt(task_id: str, level: int, split_kernels: bool = False) -> st
     # 3. Interface (function signatures — task-specific)
     interface_code = tmpl.get("interface", "").strip()
     if task.interface_mode == "compute_only":
-        interface_intro = "Implement `solution_compute` and `solution_free` as `extern \"C\"` functions in a single `.cu` file. There is NO `solution_init`. **Do NOT** write `main()`, do NOT read/write any files."
+        interface_intro = (
+            "Implement `solution_compute` as an `extern \"C\"` function in a single `.cu` file. "
+            "There is NO `solution_init` — do ALL setup inside `solution_compute`. "
+            "`solution_free` is optional (has a weak default). "
+            "**Do NOT** write `main()`, do NOT read/write any files."
+        )
     else:
-        interface_intro = "Implement these two `extern \"C\"` functions in a single `.cu` file. **Do NOT** write `main()`, do NOT read/write any files."
+        interface_intro = (
+            "Implement `solution_init` and `solution_compute` as `extern \"C\"` functions "
+            "in a single `.cu` file. `solution_init` receives inputs once; "
+            "`solution_compute` is called multiple times (must synchronize before returning). "
+            "`solution_free` is optional (has a weak default). "
+            "**Do NOT** write `main()`, do NOT read/write any files."
+        )
     interface_section = f"\n\n## Interface\n\n{interface_intro}\n\n{interface_code}\n"
 
     # 4. Constraints (generic, mode-dependent)

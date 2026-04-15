@@ -28,8 +28,8 @@ SIZES = {
                "num_clusters": 15, "cluster_std": 0.02, "noise_frac": 0.05},
     "medium": {"N": 100000, "eps_x10000": 100, "minPts": 8, "seed": 42,
                "num_clusters": 30, "cluster_std": 0.008, "noise_frac": 0.05},
-    "large":  {"N": 500000, "eps_x10000": 50,  "minPts": 8, "seed": 42,
-               "num_clusters": 50, "cluster_std": 0.004, "noise_frac": 0.05},
+    "large":  {"N": 200000, "eps_x10000": 80,  "minPts": 8, "seed": 42,
+               "num_clusters": 40, "cluster_std": 0.006, "noise_frac": 0.05},
 }
 
 

@@ -15,6 +15,8 @@ extern void solution_init(int N, int num_steps, float risk_free, float volatilit
                           unsigned int base_seed);
 extern void solution_compute(int N, float* payoffs);
 extern void solution_free(void);
+// Weak default: LLM does not need to implement solution_free
+extern "C" __attribute__((weak)) void solution_free(void) { }
 
 #ifdef __cplusplus
 }

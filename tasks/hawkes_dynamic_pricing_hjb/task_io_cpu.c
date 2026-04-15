@@ -13,6 +13,9 @@ extern void solution_compute(
 );
 extern void solution_free(void);
 
+// Weak default: LLM does not need to implement solution_free
+__attribute__((weak)) void solution_free(void) { }
+
 typedef struct {
     int batch_size, J, N, num_actions;
     float h, tau, lambda0, a, b_param;

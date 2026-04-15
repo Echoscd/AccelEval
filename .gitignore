@@ -37,3 +37,13 @@ logs/
 
 # 系统文件
 .DS_Store
+
+# Local: external repos cloned for reference (too large, have their own git history)
+resource/
+# Local: knowledge base data
+Library/
+# Local: generated files
+*.pptx
+*.png
+Untitled
+task_progress.csv

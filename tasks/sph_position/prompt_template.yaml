@@ -19,13 +19,13 @@ interface: |
   // Called once to receive particle data (host pointers).
   extern "C" void solution_init(
       int N,                      // number of particles
-      const double* posxy_x,      // HOST [N]: x positions
-      const double* posxy_y,      // HOST [N]: y positions
-      const double* posz,         // HOST [N]: z positions
-      const double* movxy_x,      // HOST [N]: x displacements
-      const double* movxy_y,      // HOST [N]: y displacements
-      const double* movz,         // HOST [N]: z displacements
-      double cell_size            // cell size for spatial hashing
+      const float* posxy_x,       // HOST [N]: x positions (float32)
+      const float* posxy_y,       // HOST [N]: y positions (float32)
+      const float* posz,          // HOST [N]: z positions (float32)
+      const float* movxy_x,       // HOST [N]: x displacements (float32)
+      const float* movxy_y,       // HOST [N]: y displacements (float32)
+      const float* movz,          // HOST [N]: z displacements (float32)
+      float cell_size             // cell size for spatial hashing
   );
 
   // Called multiple times (must be idempotent and synchronize before returning).
@@ -34,9 +34,16 @@ interface: |
       double* out_x,              // HOST [N]: output x positions
       double* out_y,              // HOST [N]: output y positions
       double* out_z,              // HOST [N]: output z positions
-      int* out_cell               // HOST [N]: output linearized cell index
+      int* out_cell               // HOST [N]: linearized cell index
   );
   ```
+
+  **Cell encoding (IMPORTANT)**: For each particle compute integer cell indices
+  `cx = (int)floor(rx / cell_size)`, `cy = (int)floor(ry / cell_size)`,
+  `cz = (int)floor(rz / cell_size)` and encode as
+  `out_cell[i] = cx + cy * 1000 + cz * 1000000`. Do NOT use bit-packed
+  DualSPHysics cellcodes — use this simple linear encoding to match the
+  CPU reference output exactly.
 
 input_size_notes: |
   | Size   | N (particles) |

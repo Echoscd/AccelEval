@@ -20,7 +20,7 @@ from framework.orbench_io_py import write_input_bin
 SIZES = {
     "small": {"num_nodes": 100, "num_edges": 400, "num_steps": 1000, "seed": 42},
     "medium": {"num_nodes": 1000, "num_edges": 4000, "num_steps": 5000, "seed": 42},
-    "large": {"num_nodes": 5000, "num_edges": 20000, "num_steps": 10000, "seed": 42}
+    "large": {"num_nodes": 2000, "num_edges": 8000, "num_steps": 8000, "seed": 42}
 }
 
 def generate_graph(num_nodes, num_edges, seed):

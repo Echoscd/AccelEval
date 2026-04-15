@@ -9,6 +9,9 @@ extern void solution_init(int ref_nb, int query_nb, int dim,
 extern void solution_compute(int ref_nb, int query_nb, int dim, float* dist);
 extern void solution_free(void);
 
+// Weak default: LLM does not need to implement solution_free
+__attribute__((weak)) void solution_free(void) { }
+
 typedef struct {
     int    ref_nb;
     int    query_nb;

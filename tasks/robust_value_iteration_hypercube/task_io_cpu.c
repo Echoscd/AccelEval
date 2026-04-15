@@ -8,6 +8,9 @@
 extern void solution_compute(int S, int A, int T, float gamma, const float* rew, const float* P_up, const float* P_down, float* V);
 extern void solution_free(void);
 
+// Weak default: LLM does not need to implement solution_free
+__attribute__((weak)) void solution_free(void) { }
+
 typedef struct {
     int S, A, T;
     float gamma;

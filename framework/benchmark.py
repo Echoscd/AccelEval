@@ -27,10 +27,7 @@ class TimingStats:
 
 @dataclass
 class BenchmarkResult:
-    # Init timing (solution_init, from timing.json)
-    init_ms: float = -1.0
-
-    # Solve timing (solution_compute, CUDA Event, from timing.json / stdout)
+    # End-to-end timing (CUDA Event, from program stdout)
     e2e_time_ms: TimingStats = field(default_factory=TimingStats)
 
     # Kernel-only timing (from nsys trace)
@@ -39,19 +36,12 @@ class BenchmarkResult:
     num_kernel_launches: Optional[int] = None
     memcpy_overhead_ms: Optional[float] = None
     nsys_csv_path: Optional[str] = None         # path to saved CSV
-    # Optional detailed breakdown from nsys (per-kernel and mem ops)
-    kernel_summary: Optional[dict] = None       # name -> {count,total_ms,avg_us,...}
-    mem_time_summary: Optional[dict] = None     # op(HtoD/DtoH/memset) -> {count,total_ms,...}
 
-    # CPU baseline (init + solve separately)
-    cpu_init_ms: float = -1.0
-    cpu_solve_ms: float = -1.0
-    cpu_baseline_ms: float = -1.0               # legacy: cpu_solve_ms alias
+    # CPU baseline
+    cpu_baseline_ms: float = -1.0
 
     # Speedups
-    speedup_e2e: float = -1.0                   # legacy: cpu_solve / gpu_solve
-    speedup_solve: float = -1.0                 # cpu_solve / gpu_solve
-    speedup_total: float = -1.0                 # (cpu_init + cpu_solve) / (gpu_init + gpu_solve)
+    speedup_e2e: float = -1.0
     speedup_kernel: Optional[float] = None
 
     # Which data was used (so caller can find output.txt for validation)
@@ -228,7 +218,7 @@ def benchmark_solution(
         result.error = f"Execution failed: {stderr[:200]}"
         return result
 
-    # Prefer timing.json (detailed: init_ms + mean/min/max/num_trials) written by harness
+    # Prefer timing.json (detailed: mean/min/max/num_trials) written by harness
     timing_json_path = _os.path.join(data_dir, "timing.json")
     if _os.path.exists(timing_json_path):
         try:
@@ -241,9 +231,6 @@ def benchmark_solution(
                 max=timing["max_ms"],
                 num_trials=timing["num_trials"],
             )
-            # Init timing (new in v2.2)
-            if "init_ms" in timing:
-                result.init_ms = timing["init_ms"]
         except Exception:
             # Fallback to stdout parsing
             t = parse_timing_output(stdout)
@@ -255,38 +242,11 @@ def benchmark_solution(
         if t is not None:
             result.e2e_time_ms = TimingStats(mean=t, std=0.0, min=t, max=t, num_trials=1)
 
-    # Also try to parse INIT_MS from stdout (fallback)
-    if result.init_ms < 0:
-        m = re.search(r"INIT_MS:\s*([0-9.]+)", stdout)
-        if m:
-            result.init_ms = float(m.group(1))
+    # === CPU baseline ===
+    result.cpu_baseline_ms = run_cpu_baseline(task_id, data_dir=data_dir)
 
-    # === CPU baseline (also has init_ms now) ===
-    cpu_solve_ms = run_cpu_baseline(task_id, data_dir=data_dir)
-    result.cpu_solve_ms = cpu_solve_ms
-    result.cpu_baseline_ms = cpu_solve_ms  # legacy alias
-
-    # Read CPU init_ms from CPU's timing.json (run_cpu_baseline already wrote it)
-    cpu_timing_path = _os.path.join(data_dir, "timing.json")
-    # CPU baseline overwrites timing.json, so read it again
-    # Actually, we need to read CPU's timing separately.
-    # The CPU baseline runner produces its own timing.json with init_ms.
-    # For now, read cpu_time_ms.txt (solve only) and run CPU to get init_ms.
-    # We'll parse the CPU timing from cpu_time_ms.txt (legacy: solve only).
-    # TODO: store CPU init_ms in a separate file if needed.
-    result.cpu_init_ms = 0.0  # CPU init is typically negligible
-
-    gpu_solve = result.e2e_time_ms.mean
-    gpu_init = result.init_ms if result.init_ms > 0 else 0.0
-
-    if cpu_solve_ms > 0 and gpu_solve > 0:
-        result.speedup_solve = cpu_solve_ms / gpu_solve
-        result.speedup_e2e = cpu_solve_ms / gpu_solve  # legacy compat
-
-    if cpu_solve_ms > 0 and (gpu_init + gpu_solve) > 0:
-        cpu_total = result.cpu_init_ms + cpu_solve_ms
-        gpu_total = gpu_init + gpu_solve
-        result.speedup_total = cpu_total / gpu_total
+    if result.cpu_baseline_ms > 0 and result.e2e_time_ms.mean > 0:
+        result.speedup_e2e = result.cpu_baseline_ms / result.e2e_time_ms.mean
 
     # === Level B: nsys trace analysis (optional) ===
     if run_nsys:
@@ -315,48 +275,28 @@ def benchmark_solution(
                     result.num_kernel_launches = nsys_data.get("num_kernel_launches")
                     result.memcpy_overhead_ms = nsys_data.get("total_memcpy_time_ms")
 
-                    # nsys reports cumulative kernel/memcpy time across ALL
-                    # invocations (warmup + trials + validate).  Divide by the
-                    # total number of solution_compute calls to get per-call
-                    # values that are comparable with e2e_time_ms (per-call).
-                    num_calls = config.eval.warmup + result.e2e_time_ms.num_trials + 1  # +1 for --validate
-                    if num_calls > 0 and result.kernel_time_ms:
-                        kernel_per_call = result.kernel_time_ms / num_calls
-                        result.kernel_time_ms = kernel_per_call
-
-                    if num_calls > 0 and result.memcpy_overhead_ms:
-                        result.memcpy_overhead_ms = result.memcpy_overhead_ms / num_calls
-
                     if result.kernel_time_ms and result.e2e_time_ms.mean > 0:
                         result.gpu_utilization = result.kernel_time_ms / result.e2e_time_ms.mean
 
                     if result.cpu_baseline_ms > 0 and result.kernel_time_ms:
                         result.speedup_kernel = result.cpu_baseline_ms / result.kernel_time_ms
 
-                # Full analysis from all CSVs (for detailed per-kernel / mem breakdown)
-                if exported_csvs:
+                # Full analysis from all CSVs
+                if save_nsys_csv and save_nsys_csv_dir and exported_csvs:
+                    import shutil
+                    os.makedirs(save_nsys_csv_dir, exist_ok=True)
+
+                    # Copy all CSV files to run directory
+                    for report_name, csv_path in exported_csvs.items():
+                        dst = os.path.join(save_nsys_csv_dir, f"nsys_{report_name}.csv")
+                        shutil.copy2(csv_path, dst)
+                    print(f"  [nsys] {len(exported_csvs)} CSV files saved to {save_nsys_csv_dir}")
+
+                    # Generate comprehensive summary
                     full_analysis = analyze_all_nsys_csvs(exported_csvs)
-                    # Prefer the aggregated kernel_summary; fall back to gpu_trace breakdown
-                    ks = full_analysis.get("kernel_summary")
-                    if not ks:
-                        ks = full_analysis.get("gpu_trace", {}).get("kernel_breakdown")
-                    result.kernel_summary = ks
-                    result.mem_time_summary = full_analysis.get("mem_time_summary")
-
-                    if save_nsys_csv and save_nsys_csv_dir:
-                        import shutil
-                        os.makedirs(save_nsys_csv_dir, exist_ok=True)
-
-                        # Copy all CSV files to run directory
-                        for report_name, csv_path in exported_csvs.items():
-                            dst = os.path.join(save_nsys_csv_dir, f"nsys_{report_name}.csv")
-                            shutil.copy2(csv_path, dst)
-                        print(f"  [nsys] {len(exported_csvs)} CSV files saved to {save_nsys_csv_dir}")
-
-                        # Generate comprehensive summary
-                        summary_path = os.path.join(save_nsys_csv_dir, "nsys_summary.txt")
-                        write_nsys_full_summary(full_analysis, summary_path)
-                        print(f"  [nsys] Full summary saved to {summary_path}")
+                    summary_path = os.path.join(save_nsys_csv_dir, "nsys_summary.txt")
+                    write_nsys_full_summary(full_analysis, summary_path)
+                    print(f"  [nsys] Full summary saved to {summary_path}")
 
         except Exception as e:
             # nsys is optional; don't fail the benchmark

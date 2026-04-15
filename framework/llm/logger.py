@@ -98,7 +98,7 @@ def log_response(
         "output_tokens": output_tokens,
         "cost_usd": cost_usd,
         "latency_ms": latency_ms,
-        "response_chars": len(content),
+        "response_chars": len(content) if content else 0,
         "response": content,
     })
 

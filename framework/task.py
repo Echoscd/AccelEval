@@ -40,7 +40,7 @@ class TaskConfig:
     trials: int = 10
     timeout: int = 180
 
-    # Interface mode: "init_compute" (default) or "compute_only"
+    # Interface mode: "init_compute" or "compute_only"
     interface_mode: str = "init_compute"
 
     # GPU optimization points this task could benefit from
