@@ -1,0 +1,37 @@
+{
+  "task_id": "polybench_2mm",
+  "name": "PolyBench 2MM (Two Matrix Multiplications)",
+  "category": "linear_algebra",
+  "difficulty": 2,
+  "tags": ["polybench", "2mm", "dense_linear_algebra", "blas", "matrix_multiply"],
+
+  "input_sizes": {
+    "small":  {"ni": 192, "nj": 192, "nk": 192, "nl": 192, "alpha_milli": 1500, "beta_milli": 1200},
+    "medium": {"ni": 384, "nj": 384, "nk": 384, "nl": 384, "alpha_milli": 1500, "beta_milli": 1200},
+    "large":  {"ni": 640, "nj": 640, "nk": 640, "nl": 640, "alpha_milli": 1500, "beta_milli": 1200}
+  },
+
+  "correctness": {
+    "mode": "numeric",
+    "atol": 1e-4,
+    "rtol": 1e-4
+  },
+
+  "timing": {
+    "warmup": 1,
+    "trials": 3,
+    "timeout": 240
+  },
+
+  "interface_mode": "init_compute",
+  "build_command": "",
+  "extra_build_flags": "",
+
+  "gpu_optimization_points": [
+    "tiled_gemm_for_tmp",
+    "tiled_gemm_for_output",
+    "kernel_fusion_or_pipeline_of_two_gemms",
+    "shared_memory_tiling",
+    "register_blocking"
+  ]
+}

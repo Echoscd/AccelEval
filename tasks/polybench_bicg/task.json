@@ -1,0 +1,37 @@
+{
+  "task_id": "polybench_bicg",
+  "name": "PolyBench BiCG (BiCG Sub Kernel)",
+  "category": "linear_algebra",
+  "difficulty": 2,
+  "tags": ["polybench", "bicg", "dense_linear_algebra", "matrix_vector", "transpose_mv"],
+
+  "input_sizes": {
+    "small":  {"n": 1024, "m": 1024},
+    "medium": {"n": 3072, "m": 3072},
+    "large":  {"n": 4096, "m": 4096}
+  },
+
+  "correctness": {
+    "mode": "numeric",
+    "atol": 1e-4,
+    "rtol": 1e-4
+  },
+
+  "timing": {
+    "warmup": 1,
+    "trials": 3,
+    "timeout": 240
+  },
+
+  "interface_mode": "init_compute",
+  "build_command": "",
+  "extra_build_flags": "",
+
+  "gpu_optimization_points": [
+    "row_parallel_spmv_like_kernel_for_q",
+    "column_parallel_transpose_mv_for_s",
+    "shared_memory_or_cache_use_for_p_and_r",
+    "kernel_fusion_or_dual_output_strategy",
+    "coalesced_access_and_reduction_strategy"
+  ]
+}

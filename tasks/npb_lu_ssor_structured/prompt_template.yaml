@@ -1,0 +1,20 @@
+task: npb_lu_ssor_structured
+summary: >
+  Implement a GPU solution for a structured-grid SSOR benchmark adapted from the
+  NPB LU benchmark family. The task performs repeated forward and backward
+  lexicographic block sweeps over a 3D grid with 5 coupled unknowns per point,
+  followed by componentwise residual norm computation.
+
+inputs:
+  - u0: float64[n*n*n*5]
+  - rhs: float64[n*n*n*5]
+  - params: n, iters, omega_milli
+
+output:
+  - residual_norms: float64[5]
+
+notes:
+  - Preserve the CPU reference semantics exactly.
+  - The update order matters because the sweeps are lexicographic.
+  - Each grid point solves a tiny dense 5x5 system.
+  - Avoid repeated host-device transfers across SSOR iterations.

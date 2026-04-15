@@ -1,0 +1,37 @@
+{
+  "task_id": "hotspot_2d",
+  "name": "Hotspot 2D Thermal Simulation",
+  "category": "stencil_simulation",
+  "difficulty": 2,
+  "tags": ["stencil", "thermal", "finite_difference", "double_buffering", "structured_grid"],
+  "interface_mode": "init_compute",
+
+  "input_sizes": {
+    "small":  {"rows": 256,  "cols": 256,  "iters": 50,  "seed": 7},
+    "medium": {"rows": 768,  "cols": 768,  "iters": 100, "seed": 7},
+    "large":  {"rows": 1536, "cols": 1536, "iters": 150, "seed": 7}
+  },
+
+  "correctness": {
+    "mode": "numerical",
+    "atol": 1e-3,
+    "rtol": 1e-4
+  },
+
+  "timing": {
+    "warmup": 3,
+    "trials": 10,
+    "timeout": 300
+  },
+
+  "build_command": "",
+  "extra_build_flags": "",
+
+  "gpu_optimization_points": [
+    "persistent_grid_copy",
+    "2d_tiled_stencil",
+    "shared_memory_halo",
+    "double_buffering",
+    "boundary_specialization"
+  ]
+}

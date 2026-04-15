@@ -1,0 +1,22 @@
+task: gapbs_triangle_orderedcount
+summary: >
+  Implement a GPU solution for the GAP Benchmark Suite triangle counting kernel
+  using the OrderedCount strategy on an undirected graph with sorted CSR
+  neighborhoods. Count each triangle exactly once using the orientation rule
+  u > v > w.
+
+inputs:
+  - row_ptr: int32[n+1]
+  - col_idx: int32[m]
+  - params: n, m
+
+output:
+  - triangle_count: uint64 scalar
+
+notes:
+  - The graph is undirected, has no duplicate edges, and every CSR row is
+    sorted in ascending vertex order.
+  - Match the CPU reference semantics exactly.
+  - Count a triangle only when u > v > w, matching GAPBS OrderedCount.
+  - A two-pointer intersection on sorted neighborhoods is the intended core
+    primitive.

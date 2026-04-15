@@ -1,0 +1,35 @@
+{
+  "task_id": "rodinia_bfs_levels",
+  "name": "Rodinia BFS Level-Synchronous Traversal",
+  "category": "graph_traversal",
+  "difficulty": 2,
+  "tags": ["graph", "BFS", "frontier", "level_synchronous", "Rodinia"],
+  "interface_mode": "init_compute",
+
+  "input_sizes": {
+    "small":  {"num_nodes": 20000,  "avg_degree": 6, "seed": 11},
+    "medium": {"num_nodes": 100000, "avg_degree": 8, "seed": 11},
+    "large":  {"num_nodes": 250000, "avg_degree": 8, "seed": 11}
+  },
+
+  "correctness": {
+    "mode": "exact"
+  },
+
+  "timing": {
+    "warmup": 3,
+    "trials": 10,
+    "timeout": 300
+  },
+
+  "build_command": "",
+  "extra_build_flags": "",
+
+  "gpu_optimization_points": [
+    "persistent_graph_copy",
+    "frontier_parallel_expand",
+    "bitmap_or_queue_frontier",
+    "coalesced_edge_walks",
+    "direction_optimizing_or_compaction"
+  ]
+}

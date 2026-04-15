@@ -1,0 +1,22 @@
+task: gapbs_pagerank_pullgs
+summary: >
+  Implement a GPU solution for the GAP Benchmark Suite PageRank kernel using
+  the pull-direction Gauss-Seidel style update. For each destination vertex,
+  sum incoming neighbor contributions, update its score, and refresh its
+  outgoing contribution.
+
+inputs:
+  - in_row_ptr: int32[n+1]
+  - in_col_idx: int32[m]
+  - out_degree: int32[n]
+  - params: n, m, max_iters
+
+output:
+  - scores: float32[n]
+
+notes:
+  - Match the CPU reference semantics exactly.
+  - Use damping factor 0.85 and convergence threshold 1e-4.
+  - The update order is pull-direction with new values immediately visible,
+    matching the Gauss-Seidel style used in GAPBS PageRank.
+  - Output must match the CPU reference within the configured numeric tolerance.

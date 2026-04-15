@@ -1,0 +1,63 @@
+task_description: |
+  Simulate transient temperature evolution on a 2D chip surface using the Rodinia Hotspot finite-difference model.
+
+  Inputs are the initial temperature field `temp0[rows][cols]` and the power dissipation field `power[rows][cols]`.
+  Run `iters` time steps and output the final temperature field.
+
+interface: |
+  ```c
+  extern "C" void solution_init(
+      int rows,
+      int cols,
+      int iters,
+      const float* temp0,
+      const float* power
+  );
+
+  extern "C" void solution_compute(
+      float* out_temp   // host, length rows*cols
+  );
+
+  extern "C" void solution_free(void);
+  ```
+
+input_size_notes: |
+  - `temp0` and `power` are row-major float arrays of length `rows*cols`.
+  - **small**: 256x256, 50 iterations
+  - **medium**: 768x768, 100 iterations
+  - **large**: 1536x1536, 150 iterations
+
+output_contract: |
+  - Output the final temperature of every cell after `iters` iterations.
+  - Output format is row-major float array written as one number per line.
+  - Numerical tolerance: `atol=1e-3`, `rtol=1e-4`.
+
+algorithm_background: |
+  This is a structured-grid stencil update adapted from Rodinia Hotspot.
+  Each iteration updates each cell using its current temperature, its immediate neighbors,
+  the power input, and ambient-temperature dissipation.
+
+  Interior cells use a 5-point stencil; edges and corners use one-sided boundary conditions.
+  The computation naturally uses two buffers (`src` and `dst`) swapped after each iteration.
+
+hints_l2: |
+  - Keep `temp0` and `power` on GPU persistently after initialization.
+  - Use a 2D thread block layout that maps naturally to the grid.
+  - Tile the temperature grid into shared memory with halo cells.
+  - Consider a separate fast path for interior tiles and a simpler path for boundaries.
+
+hints_l1: |
+  ### 1. Persistent device allocations
+  Allocate device buffers for `src`, `dst`, and `power` in `solution_init`.
+
+  ### 2. Iterative stencil kernel
+  For each iteration, launch a 2D kernel that updates one cell per thread.
+
+  ### 3. Boundary handling
+  Rodinia Hotspot uses explicit formulas for corners and edges. Keep those conditions correct.
+
+  ### 4. Shared-memory tiling
+  Interior blocks can load a tile of `src` plus a one-cell halo to reduce global-memory traffic.
+
+  ### 5. Final copy-back
+  After the last iteration, copy the final buffer to `out_temp` on host.

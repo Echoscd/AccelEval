@@ -1,0 +1,13 @@
+task_id: rodinia_lud_blocked
+language: cuda
+interface:
+  init: |
+    void solution_init(int n, const float* A0);
+  compute: |
+    void solution_compute(float* LU);
+  free: |
+    void solution_free(void);
+notes: |
+  Implement blocked LU decomposition without pivoting for a dense float32 matrix.
+  Input matrix A0 is immutable across trials. solution_compute should write the combined L/U factors into LU.
+  The Rodinia OpenMP source uses a fixed block size BS=16 and performs diagonal, perimeter, and interior block updates.

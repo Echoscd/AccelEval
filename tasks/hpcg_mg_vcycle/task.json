@@ -1,0 +1,24 @@
+{
+  "task_id": "hpcg_mg_vcycle",
+  "name": "HPCG Multigrid V-Cycle on a 27-Point Stencil Matrix",
+  "category": "sparse_linear_algebra",
+  "difficulty": 4,
+  "tags": ["hpcg", "multigrid", "v_cycle", "csr", "27_point_stencil", "symgs", "restriction", "prolongation"],
+  "input_sizes": {
+    "small":  {"nx": 32, "ny": 32, "nz": 32, "coarse_levels": 3},
+    "medium": {"nx": 56, "ny": 56, "nz": 56, "coarse_levels": 3},
+    "large":  {"nx": 72, "ny": 72, "nz": 72, "coarse_levels": 3}
+  },
+  "correctness": {"mode": "numeric", "atol": 1e-9, "rtol": 1e-9},
+  "timing": {"warmup": 1, "trials": 3, "timeout": 300},
+  "interface_mode": "init_compute",
+  "build_command": "",
+  "extra_build_flags": "",
+  "gpu_optimization_points": [
+    "levelwise_spmv_and_symgs_on_nested_grids",
+    "warp_synchronous_sparse_row_updates",
+    "coarse_grid_residual_injection_and_correction_prolongation",
+    "reuse_of_regular_27pt_structure_for_specialized_kernels",
+    "separate_handling_of_presmooth_and_postsmooth_dependencies"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "task_id": "npb_cg_sparse_solve",
+  "name": "NPB Sparse Conjugate Gradient Solve",
+  "category": "sparse_linear_algebra",
+  "difficulty": 3,
+  "tags": ["sparse_matrix", "csr", "conjugate_gradient", "spmv", "reductions", "iterative_solver"],
+
+  "input_sizes": {
+    "small":  {"n": 8192,   "neighbors_per_row": 12, "max_iters": 40, "tol_exp": 8, "seed": 42},
+    "medium": {"n": 32768,  "neighbors_per_row": 16, "max_iters": 50, "tol_exp": 8, "seed": 42},
+    "large":  {"n": 131072, "neighbors_per_row": 20, "max_iters": 60, "tol_exp": 8, "seed": 42}
+  },
+
+  "correctness": {
+    "mode": "numeric",
+    "atol": 1e-5,
+    "rtol": 1e-5
+  },
+
+  "timing": {
+    "warmup": 2,
+    "trials": 5,
+    "timeout": 240
+  },
+
+  "interface_mode": "init_compute",
+  "build_command": "",
+  "extra_build_flags": "",
+
+  "gpu_optimization_points": [
+    "csr_spmv_row_parallelization",
+    "warp_cooperative_sparse_rows",
+    "reduction_fusion_for_dot_products",
+    "vector_update_kernel_fusion",
+    "persistent_iteration_state_on_device"
+  ]
+}

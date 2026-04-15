@@ -1,0 +1,37 @@
+{
+  "task_id": "polybench_gemver",
+  "name": "PolyBench GEMVER (Vector Multiplication and Matrix Addition)",
+  "category": "linear_algebra",
+  "difficulty": 2,
+  "tags": ["polybench", "gemver", "dense_linear_algebra", "outer_product", "matrix_vector"],
+
+  "input_sizes": {
+    "small":  {"n": 1536},
+    "medium": {"n": 3072},
+    "large":  {"n": 4608}
+  },
+
+  "correctness": {
+    "mode": "numeric",
+    "atol": 1e-4,
+    "rtol": 1e-4
+  },
+
+  "timing": {
+    "warmup": 1,
+    "trials": 3,
+    "timeout": 240
+  },
+
+  "interface_mode": "init_compute",
+  "build_command": "",
+  "extra_build_flags": "",
+
+  "gpu_optimization_points": [
+    "parallel_outer_product_update_for_A_plus_u1v1T_plus_u2v2T",
+    "transpose_aware_parallelization_for_x_equals_beta_ATy_plus_z",
+    "row_parallel_matrix_vector_multiply_for_w_equals_alpha_Ax",
+    "kernel_fusion_or_pipelining_between_three_dense_phases",
+    "coalesced_access_and_shared_memory_reuse_for_vectors"
+  ]
+}

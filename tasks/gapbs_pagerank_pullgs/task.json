@@ -1,0 +1,37 @@
+{
+  "task_id": "gapbs_pagerank_pullgs",
+  "name": "GAPBS PageRank Pull Gauss-Seidel",
+  "category": "graph_analytics",
+  "difficulty": 3,
+  "tags": ["gapbs", "pagerank", "pull", "gauss_seidel", "graph", "csr"],
+
+  "input_sizes": {
+    "small":  {"n": 32768,  "out_deg": 8,  "max_iters": 20},
+    "medium": {"n": 131072, "out_deg": 10, "max_iters": 20},
+    "large":  {"n": 262144, "out_deg": 12, "max_iters": 20}
+  },
+
+  "correctness": {
+    "mode": "numeric",
+    "atol": 1e-4,
+    "rtol": 1e-4
+  },
+
+  "timing": {
+    "warmup": 1,
+    "trials": 3,
+    "timeout": 240
+  },
+
+  "interface_mode": "init_compute",
+  "build_command": "",
+  "extra_build_flags": "",
+
+  "gpu_optimization_points": [
+    "parallel_pull_pagerank_over_destination_vertices",
+    "coalesced_traversal_of_incoming_csr_edges",
+    "warp_or_block_reduction_for_incoming_neighbor_sums",
+    "fused_score_update_and_outgoing_contribution_update",
+    "avoiding_divergence_for_variable_in_degrees"
+  ]
+}

@@ -1,0 +1,19 @@
+task: gapbs_cc_afforest
+summary: >
+  Implement a GPU solution for the GAP Benchmark Suite connected components
+  kernel using the Afforest strategy on an undirected CSR graph.
+
+inputs:
+  - row_ptr: int32[n+1]
+  - col_idx: int32[m]
+  - params: n, m, neighbor_rounds, num_samples
+
+output:
+  - comp_out: int32[n]
+
+notes:
+  - The graph is undirected and stored in CSR.
+  - Match the CPU reference semantics exactly.
+  - Preserve the Afforest structure: sparse sampled rounds, component
+    compression, largest-component estimate, then final linking.
+  - The output is the final compressed component-label array.

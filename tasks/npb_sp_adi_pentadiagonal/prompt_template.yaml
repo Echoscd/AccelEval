@@ -1,0 +1,20 @@
+task: npb_sp_adi_pentadiagonal
+summary: >
+  Implement a GPU solution for a structured-grid ADI benchmark adapted from the
+  NPB SP benchmark family. The task performs repeated compute_rhs-style residual
+  construction, local variable transforms, and x/y/z scalar pentadiagonal line
+  solves on a 3D grid with 5 coupled unknowns per point.
+
+inputs:
+  - u0: float64[n*n*n*5]
+  - rhs: float64[n*n*n*5]
+  - params: n, iters, omega_milli
+
+output:
+  - residual_norms: float64[5]
+
+notes:
+  - Preserve the CPU reference semantics exactly.
+  - The algorithm uses scalar pentadiagonal line solves along x, y, and z.
+  - Local component-coupling transforms happen between the directional solves.
+  - Avoid repeated host-device transfers across iterations.
