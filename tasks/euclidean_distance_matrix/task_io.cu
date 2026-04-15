@@ -13,6 +13,8 @@ extern void solution_init(int ref_nb, int query_nb, int dim,
                           const float* ref, const float* query);
 extern void solution_compute(int ref_nb, int query_nb, int dim, float* dist);
 extern void solution_free(void);
+// Weak default: LLM does not need to implement solution_free
+extern "C" __attribute__((weak)) void solution_free(void) { }
 
 #ifdef __cplusplus
 }

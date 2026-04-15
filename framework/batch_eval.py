@@ -11,7 +11,6 @@ import argparse
 import multiprocessing as mp
 from dataclasses import dataclass, asdict
 from typing import Optional
-import re
 
 from .task import load_task, load_all_tasks, ORBENCH_ROOT
 from .compile import compile_solution
@@ -24,7 +23,6 @@ from .config import get_config
 class EvalResult:
     task_id: str
     sample_id: int
-    kernel_count: int = 0
     compiled: bool = False
     compile_error: str = ""
     correct: bool = False
@@ -35,48 +33,6 @@ class EvalResult:
     def to_dict(self):
         d = asdict(self)
         return d
-
-
-def count_global_kernels_in_source(source_path: str) -> int:
-    """
-    Count the number of CUDA __global__ and __device__ kernel/function *definitions* in a .cu file.
-    This is a static heuristic intended for reporting "LLM-written kernel count"
-    in eval JSON; it does not attempt full C++ parsing.
-    """
-    try:
-        with open(source_path, "r", encoding="utf-8", errors="ignore") as f:
-            s = f.read()
-    except Exception:
-        return 0
-
-    # Strip comments to avoid counting "__global__"/"__device__" inside comments/strings.
-    # First handle block comments (/* ... */)
-    s = re.sub(r"/\*.*?\*/", "", s, flags=re.DOTALL)
-    # Then handle line comments (// ...)
-    s = re.sub(r"//.*?$", "", s, flags=re.MULTILINE)
-
-    # Count both __global__ and __device__ function definitions.
-    # Pattern: (__global__|__device__) followed by function signature ending with ) {
-    # We use a more robust approach: find all __global__/__device__ positions,
-    # then check if there's a function body (closing paren followed by opening brace)
-    # within a reasonable distance (function signature length).
-    count = 0
-    
-    # Find all positions of __global__ or __device__
-    for match in re.finditer(r"\b(__global__|__device__)\b", s):
-        start_pos = match.start()
-        # Look ahead from this position to find the function body opening brace
-        # Allow up to 1000 characters for the function signature (should be enough)
-        search_end = min(start_pos + 1000, len(s))
-        segment = s[start_pos:search_end]
-        
-        # Check if we can find a closing paren followed by an opening brace
-        # This indicates a function definition (not just a declaration)
-        # We look for ) followed by optional whitespace and {
-        if re.search(r"\)\s*\{", segment):
-            count += 1
-    
-    return count
 
 
 def eval_single_sample(
@@ -103,7 +59,6 @@ def eval_single_sample(
         run_nsys = config.profiling.nsys_enabled
     
     result = EvalResult(task_id=task_id, sample_id=sample_id)
-    result.kernel_count = count_global_kernels_in_source(sample_path)
 
     # Step 1: Compile
     compile_result = compile_solution(task_id, sample_path, arch=arch)
@@ -140,11 +95,21 @@ def eval_single_sample(
     bench_size = bench_result.size_name
     if bench_data_dir and bench_size:
         try:
-            if data_exists(bench_data_dir):
-                task = load_task(task_id)
-                size_params = task.input_sizes.get(bench_size, {})
-                num_requests = int(size_params.get("num_requests", 0))
+            task = load_task(task_id)
+            size_params = task.input_sizes.get(bench_size, {})
+            num_requests = int(size_params.get("num_requests", 0))
 
+            if num_requests <= 0:
+                # Infer from expected_output.txt (ground truth line count)
+                import os as _os
+                exp_txt = _os.path.join(bench_data_dir, "expected_output.txt")
+                if _os.path.exists(exp_txt):
+                    with open(exp_txt) as _f:
+                        num_requests = sum(1 for line in _f if line.strip())
+                else:
+                    num_requests = 1
+
+            if num_requests > 0 and data_exists(bench_data_dir):
                 passed, msg = validate_output(task_id, bench_data_dir, num_requests)
                 print(f"  [{bench_size}] {msg}")
                 result.correct = passed
@@ -153,7 +118,7 @@ def eval_single_sample(
                     result.error += f"Output mismatch on '{bench_size}': {msg}. "
             else:
                 result.correctness_detail = {bench_size: False}
-                result.error += f"Cannot validate: missing expected_output.txt in {bench_data_dir}. "
+                result.error += f"Cannot validate: num_requests={num_requests}, data_exists={data_exists(bench_data_dir)}. "
         except Exception as e:
             result.error += f"Validation error: {str(e)[:200]}. "
 

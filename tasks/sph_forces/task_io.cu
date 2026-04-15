@@ -22,6 +22,8 @@ extern void solution_init(int N,
 extern void solution_compute(int N,
                              float* ax, float* ay, float* az, float* drhodt);
 extern void solution_free(void);
+// Weak default: LLM does not need to implement solution_free
+extern "C" __attribute__((weak)) void solution_free(void) { }
 
 #ifdef __cplusplus
 }

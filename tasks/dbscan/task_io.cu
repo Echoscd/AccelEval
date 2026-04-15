@@ -13,6 +13,8 @@ extern void solution_init(int N, const float* xs, const float* ys,
                           float eps, int minPts);
 extern void solution_compute(int N, int* labels);
 extern void solution_free(void);
+// Weak default: LLM does not need to implement solution_free
+extern "C" __attribute__((weak)) void solution_free(void) { }
 
 #ifdef __cplusplus
 }

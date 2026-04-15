@@ -13,6 +13,9 @@ extern void solution_init(
 extern void solution_compute(float inflow_rate, float* out_total_arrived);
 extern void solution_free(void);
 
+// Weak default: LLM does not need to implement solution_free
+__attribute__((weak)) void solution_free(void) { }
+
 typedef struct {
     int num_requests;
     float* inflow_rates;

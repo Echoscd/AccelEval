@@ -9,6 +9,9 @@ extern void solution_compute(int B, int N, int V, int L,
                              int* parse_scores_out);
 extern void solution_free(void);
 
+// Weak default: LLM does not need to implement solution_free
+__attribute__((weak)) void solution_free(void) { }
+
 typedef struct {
     int B, N, V, L;
     const int* binary_scores;

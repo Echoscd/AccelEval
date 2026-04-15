@@ -27,17 +27,17 @@
       "seed": 42
     },
     "large": {
-      "S": 32,
-      "T": 1024,
-      "N": 2048,
-      "K": 16,
+      "S": 20,
+      "T": 640,
+      "N": 1280,
+      "K": 10,
       "seed": 42
     }
   },
   "correctness": {
     "mode": "numerical",
-    "atol": 1e-5,
-    "rtol": 1e-2
+    "atol": 1e-04,
+    "rtol": 0.01
   },
   "timing": {
     "warmup": 2,

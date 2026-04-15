@@ -13,6 +13,8 @@ extern void solution_init(int num_points, int num_spaces,
                           const float* points_xy, const int* space_offsets);
 extern void solution_compute(int num_points, int num_spaces, float* results);
 extern void solution_free(void);
+// Weak default: LLM does not need to implement solution_free
+extern "C" __attribute__((weak)) void solution_free(void) { }
 
 #ifdef __cplusplus
 }

@@ -19,6 +19,8 @@ extern void solution_compute(
     float* V_out
 );
 extern void solution_free(void);
+// Weak default: LLM does not need to implement solution_free
+extern "C" __attribute__((weak)) void solution_free(void) { }
 
 
 #ifdef __cplusplus

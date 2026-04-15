@@ -21,7 +21,7 @@ from framework.orbench_io_py import write_input_bin
 SIZES = {
     "small": {"N": 100, "M": 1000, "seed": 42},
     "medium": {"N": 1000, "M": 5000, "seed": 42},
-    "large": {"N": 5000, "M": 10000, "seed": 42}
+    "large": {"N": 2000, "M": 8000, "seed": 42}
 }
 
 def compile_cpu_baseline(orbench_root: Path) -> Path:

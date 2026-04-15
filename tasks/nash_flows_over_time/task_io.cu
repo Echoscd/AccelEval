@@ -17,6 +17,8 @@ extern void solution_init(
 );
 extern void solution_compute(float inflow_rate, float* out_total_arrived);
 extern void solution_free(void);
+// Weak default: LLM does not need to implement solution_free
+extern "C" __attribute__((weak)) void solution_free(void) { }
 
 #ifdef __cplusplus
 }

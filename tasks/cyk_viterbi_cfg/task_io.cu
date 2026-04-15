@@ -11,6 +11,8 @@ extern void solution_compute(int B, int N, int V, int L,
                              const int* tokens,
                              int* parse_scores_out);
 extern void solution_free(void);
+// Weak default: LLM does not need to implement solution_free
+extern "C" __attribute__((weak)) void solution_free(void) { }
 #ifdef __cplusplus
 }
 #endif

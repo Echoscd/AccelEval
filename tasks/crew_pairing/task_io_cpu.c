@@ -24,6 +24,9 @@ extern void solution_compute(int N, int num_stations, int base_station,
 
 extern void solution_free(void);
 
+// Weak default: LLM does not need to implement solution_free
+__attribute__((weak)) void solution_free(void) { }
+
 // ===== task_io internal state =====
 typedef struct {
     int N;

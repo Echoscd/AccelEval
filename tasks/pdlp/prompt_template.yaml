@@ -1,0 +1,117 @@
+# PDHG LP Solver Iterations -- Prompt Template
+
+task_description: |
+  Run K iterations of the Primal-Dual Hybrid Gradient (PDHG) algorithm to
+  solve a sparse linear program (LP):
+      min  c^T x
+      s.t. l_c <= A x <= u_c
+           l_x <= x   <= u_x
+  where A is a sparse constraint matrix stored in CSC (Compressed Sparse Column)
+  format. After K iterations, output the primal-averaged solution.
+
+  PDHG is a first-order method for LP/QP that alternates between primal and
+  dual proximal steps with matrix-vector products. It is the core algorithm
+  behind Google's PDLP solver (OR-Tools) and cuPDLP-C (GPU-native LP solver).
+  The per-iteration bottleneck is two sparse matrix-vector multiplies (SpMV).
+
+  Based on Google OR-Tools PDLP (ortools/pdlp/primal_dual_hybrid_gradient.cc).
+
+interface: |
+  ```c
+  extern "C" void solution_init(
+      int          num_vars,
+      int          num_constraints,
+      int          nnz,
+      int          num_iters,
+      const float* obj,            // c [num_vars]
+      const float* var_lb,         // l_x [num_vars]
+      const float* var_ub,         // u_x [num_vars]
+      const float* con_lb,         // l_c [num_constraints]
+      const float* con_ub,         // u_c [num_constraints]
+      const int*   col_ptrs,       // CSC column pointers [num_vars + 1]
+      const int*   row_indices,    // CSC row indices [nnz]
+      const float* values,         // CSC values [nnz]
+      float        step_size,      // eta
+      float        primal_weight   // rho
+  );
+
+  // Run K PDHG iterations, output averaged primal.
+  extern "C" void solution_compute(
+      int    num_vars,
+      int    num_constraints,
+      float* primal_out            // [num_vars]
+  );
+  ```
+
+input_size_notes: |
+  | Size   | vars   | constraints | nnz/col | total nnz | iterations |
+  |--------|--------|-------------|---------|-----------|------------|
+  | small  | 500    | 200         | 4       | ~2,000    | 500        |
+  | medium | 5,000  | 2,000       | 4       | ~20,000   | 1,000      |
+  | large  | 50,000 | 20,000      | 4       | ~200,000  | 2,000      |
+
+  - Constraint matrix A stored CSC (col_ptrs, row_indices, values)
+  - step_size = 1/||A||_2 (spectral norm), primal_weight = 1.0
+
+output_contract: |
+  - `primal_out[j]` = averaged primal variable x_j after K iterations
+  - Tolerance: atol=1e-3, rtol=1e-3
+  - `solution_compute` must be idempotent and synchronize before returning
+
+algorithm_background: |
+  **PDHG (Chambolle & Pock, 2011)**
+
+  State: primal x in R^n, dual y in R^m, cached A^T*y (dual product)
+  Parameters: step_size eta, primal_weight rho
+    tau = eta / rho  (primal step size)
+    sigma = eta * rho (dual step size)
+
+  Per iteration (constant step size rule):
+    1. Primal update: x_new = proj_{[lb_x, ub_x]}(x - tau * (c - A^T y))
+    2. Extrapolation: x_bar = 2*x_new - x
+    3. SpMV forward:  Ax_bar = A * x_bar
+    4. Dual update:   temp = y - sigma * Ax_bar
+                      y_new = max(temp + sigma*lb_c, min(0, temp + sigma*ub_c))
+    5. SpMV transpose: dual_product_new = A^T * y_new
+    6. Weighted average: x_avg += (eta / sum_w) * (x_new - x_avg)
+
+  Cost per iteration: 2 SpMV (O(nnz) each) + O(n+m) element-wise ops
+
+hints_l2: |
+  - Two SpMVs dominate runtime. Use cuSPARSE cusparseSpMV for both.
+  - Upload A to device once in solution_init (CSR or CSC format).
+  - Primal/dual updates are embarrassingly parallel element-wise ops.
+  - Fuse primal update + extrapolation into one kernel.
+  - Keep all state on device; only copy primal_avg to host at the end.
+
+hints_l1: |
+  ### 1. Data Layout
+  - Convert CSC to CSR on host (transpose) for efficient cusparseSpMV
+  - Or use CSC directly with cusparseSpMV CUSPARSE_OPERATION_TRANSPOSE
+  - Upload A, c, bounds once in solution_init
+
+  ### 2. Per-Iteration Kernel Sequence
+  ```
+  // 1. Fused primal update + extrapolation
+  kernel_primal_update<<<...>>>(n, tau, d_obj, d_dual_product,
+                                d_var_lb, d_var_ub, d_primal, d_x_bar);
+  // 2. SpMV: A * x_bar -> d_Ax_bar
+  cusparseSpMV(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+               &one, matA, vecXbar, &zero, vecAxbar, ...);
+  // 3. Dual update
+  kernel_dual_update<<<...>>>(m, sigma, d_Ax_bar, d_con_lb, d_con_ub, d_dual);
+  // 4. SpMV: A^T * y -> d_dual_product
+  cusparseSpMV(handle, CUSPARSE_OPERATION_TRANSPOSE,
+               &one, matA, vecY, &zero, vecDualProd, ...);
+  // 5. Average update
+  kernel_avg_update<<<...>>>(n, ratio, d_primal, d_primal_avg);
+  ```
+
+  ### 3. cuSPARSE Setup
+  ```cuda
+  cusparseCreate(&handle);
+  cusparseCreateCsc(&matA, m, n, nnz, d_col_ptrs, d_row_indices, d_values, ...);
+  cusparseCreateDnVec(&vecX, n, d_x, CUDA_R_32F);
+  // Allocate external buffer for SpMV
+  cusparseSpMV_bufferSize(...);
+  ```

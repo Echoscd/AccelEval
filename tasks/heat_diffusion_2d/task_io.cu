@@ -12,6 +12,8 @@ extern "C" void solution_compute(
 );
 
 extern "C" void solution_free(void);
+// Weak default: LLM does not need to implement solution_free
+extern "C" __attribute__((weak)) void solution_free(void) { }
 
 typedef struct {
     int H;

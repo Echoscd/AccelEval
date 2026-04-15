@@ -14,17 +14,28 @@ task_description: |
 
 interface: |
   ```c
-  extern "C" void solution_compute(
-      int N,
-      const int* row_ptr,   // host, [N+1]
-      const int* col_idx,   // host, [nnz]
-      const float* vals,    // host, [nnz]
-      const float* x,       // host, [N]
-      float* y              // host, [N]
+  // Called once. Receives the CSC matrix (col_ptrs, row_indices, values)
+  // and the dense input vector. Implementation should allocate device memory
+  // and copy inputs to device.
+  extern "C" void solution_init(
+      int num_rows,                // number of rows of A
+      int num_cols,                // number of cols of A
+      const int* col_ptrs,         // host, [num_cols+1], CSC column pointers
+      const int* row_indices,      // host, [nnz], CSC row indices
+      const float* values,         // host, [nnz], CSC values
+      const float* vector          // host, [num_rows], dense input vector x
   );
 
-  extern "C" void solution_free(void);
+  // Called multiple times. Computes answer = A^T * vector (length num_cols).
+  // Must be idempotent and synchronize before returning.
+  extern "C" void solution_compute(
+      int num_cols,
+      float* answer                // host, [num_cols], output
+  );
   ```
+
+  You MUST implement both `solution_init` and `solution_compute`.
+  (`solution_free` is optional — the framework provides a no-op default.)
 
 input_size_notes: |
   - small:  N = 4,096,   16 nonzeros per row

@@ -16,6 +16,9 @@ extern void solution_compute(int N,
                              int* out_cell);
 extern void solution_free(void);
 
+// Weak default: LLM does not need to implement solution_free
+__attribute__((weak)) void solution_free(void) { }
+
 typedef struct {
     int N;
     double* out_x;

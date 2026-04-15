@@ -13,6 +13,8 @@ extern void solution_init(int num_entries, int num_features,
                           const float* subjects, const float* query);
 extern void solution_compute(int num_entries, int num_features, float* distances);
 extern void solution_free(void);
+// Weak default: LLM does not need to implement solution_free
+extern "C" __attribute__((weak)) void solution_free(void) { }
 
 #ifdef __cplusplus
 }

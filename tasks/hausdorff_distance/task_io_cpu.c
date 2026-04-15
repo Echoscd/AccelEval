@@ -9,6 +9,9 @@ extern void solution_init(int num_points, int num_spaces,
 extern void solution_compute(int num_points, int num_spaces, float* results);
 extern void solution_free(void);
 
+// Weak default: LLM does not need to implement solution_free
+__attribute__((weak)) void solution_free(void) { }
+
 typedef struct {
     int    num_points;
     int    num_spaces;

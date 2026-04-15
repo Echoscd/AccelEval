@@ -45,7 +45,7 @@ def extract_auto_features(source_path: str) -> dict:
         "uses_fast_math": has_any(["__fdividef", "__expf", "__logf", "__sinf"]),
 
         # Parallelism
-        "uses_warp_shuffle": has_any(["__shfl_sync", "__shfl_down_sync", "__shfl_up_sync"]),
+        "uses_warp_shuffle": has_any(["__shfl_sync", "__shfl_down_sync", "__shfl_up_sync", "__shfl_xor_sync"]),
         "uses_warp_vote": has_any(["__ballot_sync", "__popc", "__all_sync", "__any_sync"]),
         "uses_cooperative_groups": has("cooperative_groups"),
         "num_atomicAdd": count(r"atomicAdd\b"),

@@ -1,0 +1,55 @@
+{
+  "task_id": "pdlp",
+  "name": "PDHG LP Solver Iterations (Primal-Dual Hybrid Gradient)",
+  "category": "linear_programming",
+  "difficulty": 2,
+  "tags": [
+    "LP",
+    "first_order_method",
+    "PDHG",
+    "sparse_matrix_vector",
+    "proximal_operator"
+  ],
+  "interface_mode": "init_compute",
+  "input_sizes": {
+    "small": {
+      "num_vars": 500,
+      "num_constraints": 200,
+      "nnz_per_col": 4,
+      "num_iters": 500,
+      "seed": 42
+    },
+    "medium": {
+      "num_vars": 5000,
+      "num_constraints": 2000,
+      "nnz_per_col": 4,
+      "num_iters": 1000,
+      "seed": 42
+    },
+    "large": {
+      "num_vars": 50000,
+      "num_constraints": 20000,
+      "nnz_per_col": 4,
+      "num_iters": 2000,
+      "seed": 42
+    }
+  },
+  "correctness": {
+    "mode": "numerical",
+    "atol": 0.001,
+    "rtol": 0.001
+  },
+  "timing": {
+    "warmup": 1,
+    "trials": 3,
+    "timeout": 300
+  },
+  "build_command": "",
+  "extra_build_flags": "",
+  "gpu_optimization_points": [
+    "sparse_matrix_vector_multiply",
+    "element_wise_proximal_projection",
+    "cuSPARSE_csrmv",
+    "fused_update_kernels"
+  ]
+}

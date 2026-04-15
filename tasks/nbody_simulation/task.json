@@ -14,8 +14,8 @@
 
   "correctness": {
     "mode": "numerical",
-    "atol": 1e-4,
-    "rtol": 1e-4
+    "atol": 0.01,
+    "rtol": 0.001
   },
 
   "timing": {

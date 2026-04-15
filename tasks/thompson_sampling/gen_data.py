@@ -143,10 +143,6 @@ def main():
         },
     )
 
-    # Dummy requests.txt
-    with open(out_dir / "requests.txt", "w") as f:
-        f.write("solve\n")
-
     if with_expected:
         exe = compile_cpu_baseline(_ORBENCH_ROOT)
         # Estimate timeout: ~60ns per Beta sample (N * T * M total)

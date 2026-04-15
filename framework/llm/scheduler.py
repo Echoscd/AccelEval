@@ -73,6 +73,7 @@ class GenerationScheduler:
         self.registry = registry
         self.runs_dir = runs_dir
         self._split_kernels = False
+        self._date_tag = datetime.now().strftime("%Y%m%d_%H%M")
 
         # One rate limiter per provider (shared across models of same provider)
         self._limiters: dict[str, RateLimiter] = {}
@@ -101,8 +102,7 @@ class GenerationScheduler:
     # ── Path helpers ─────────────────────────────────────────
 
     def _run_name(self, job: GenerationJob) -> str:
-        date_tag = datetime.now().strftime("%Y%m%d_%H%M")
-        return f"{job.model_id}_l{job.level}_{date_tag}"
+        return f"{job.model_id}_l{job.level}_{self._date_tag}"
 
     def _output_path(self, job: GenerationJob) -> str:
         return os.path.join(
