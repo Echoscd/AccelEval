@@ -57,7 +57,7 @@ static void compute_distancesCpu(int          ref_nb,
 
 // ===== Public interface =====
 
-void solution_init(int          ref_nb,
+static void _orbench_old_init(int          ref_nb,
                    int          query_nb,
                    int          dim,
                    const float* ref,
@@ -70,7 +70,7 @@ void solution_init(int          ref_nb,
     g_query    = query;
 }
 
-void solution_compute(int    ref_nb,
+static void _orbench_old_compute(int    ref_nb,
                       int    query_nb,
                       int    dim,
                       float* dist)
@@ -80,7 +80,8 @@ void solution_compute(int    ref_nb,
                          g_ref, g_query, dist);
 }
 
-void solution_free(void)
-{
-    /* All input data owned by task_io; nothing to free here. */
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int ref_nb, int query_nb, int dim, const float* ref, const float* query, float* dist) {
+    _orbench_old_init(ref_nb, query_nb, dim, ref, query);
+    _orbench_old_compute(ref_nb, query_nb, dim, dist);
 }

@@ -1,47 +1,49 @@
-// task_io_cpu.c — dbscan CPU I/O adapter
+// task_io_cpu.c — unified compute_only interface (auto-migrated)
 
 #include "orbench_io.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-extern void solution_init(int N, const float* xs, const float* ys,
-                          float eps, int minPts);
-extern void solution_compute(int N, int* labels);
-extern void solution_free(void);
-
-// Weak default: LLM does not need to implement solution_free
-__attribute__((weak)) void solution_free(void) { }
+void solution_compute(int N,
+                             const float* xs,
+                             const float* ys,
+                             float eps,
+                             int minPts,
+                             int* labels);
 
 typedef struct {
     int N;
+    const float* xs;
+    const float* ys;
+    float eps;
+    int minPts;
     int* labels;
 } DBSCANContext;
 
 void* task_setup(const TaskData* data, const char* data_dir) {
+    (void)data_dir;
     DBSCANContext* ctx = (DBSCANContext*)calloc(1, sizeof(DBSCANContext));
-    ctx->N = (int)get_param(data, "N");
-
+    if (!ctx) return NULL;
     int eps_x10000 = (int)get_param(data, "eps_x10000");
-    int minPts     = (int)get_param(data, "minPts");
-    float eps = (float)eps_x10000 / 10000.0f;
+    ctx->N = (int)get_param(data, "N");
+    ctx->xs = get_tensor_float(data, "xs");
+    ctx->ys = get_tensor_float(data, "ys");
+    ctx->eps = (float)eps_x10000 / 10000.0f;
+    ctx->minPts = (int)get_param(data, "minPts");
 
-    const float* xs = get_tensor_float(data, "xs");
-    const float* ys = get_tensor_float(data, "ys");
-
-    if (!xs || !ys) {
+    if (!ctx->xs || !ctx->ys) {
         fprintf(stderr, "[task_io] Missing tensor data\n");
         free(ctx);
         return NULL;
     }
-
-    solution_init(ctx->N, xs, ys, eps, minPts);
-    ctx->labels = (int*)calloc(ctx->N, sizeof(int));
+    ctx->labels = (int*)calloc((size_t)(ctx->N), sizeof(int));
     return ctx;
 }
 
 void task_run(void* test_data) {
     DBSCANContext* ctx = (DBSCANContext*)test_data;
-    solution_compute(ctx->N, ctx->labels);
+    solution_compute(ctx->N, ctx->xs, ctx->ys, ctx->eps, ctx->minPts, ctx->labels);
 }
 
 void task_write_output(void* test_data, const char* output_path) {
@@ -57,7 +59,6 @@ void task_write_output(void* test_data, const char* output_path) {
 void task_cleanup(void* test_data) {
     if (!test_data) return;
     DBSCANContext* ctx = (DBSCANContext*)test_data;
-    solution_free();
     free(ctx->labels);
     free(ctx);
 }

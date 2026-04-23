@@ -22,26 +22,22 @@ task_description: |
 
 interface: |
   ```c
-  // Called once before timing. Receive host-side NFA and string data.
-  extern "C" void solution_init(
-      int num_states,              // NFA state count
-      int num_symbols,             // alphabet size (e.g., 26 for a-z)
-      int start_state,             // start state ID
-      int num_strings,             // number of input strings
-      int total_chars,             // total characters across all strings
-      const int* trans_offsets,    // host, [num_states * num_symbols + 1], CSR offsets
-      const int* trans_targets,    // host, [num_trans], CSR targets
-      const int* eps_offsets,      // host, [num_states + 1], ε-transition CSR offsets
-      const int* eps_targets,      // host, [num_eps], ε-transition CSR targets
-      const int* is_accept,        // host, [num_states], 1 if accept state, 0 otherwise
-      const int* str_offsets,      // host, [num_strings + 1], start offset of each string
-      const int* str_data          // host, [total_chars], all strings concatenated (symbol IDs)
-  );
-
-  // Called multiple times (warmup + timed). MUST be idempotent.
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
   extern "C" void solution_compute(
-      int num_strings,             // number of strings to match
-      int* results                 // host, [num_strings], output: 1=match, 0=no match
+      int num_states,
+      int num_symbols,
+      int start_state,
+      int num_strings,
+      int total_chars,
+      const int* trans_offsets,
+      const int* trans_targets,
+      const int* eps_offsets,
+      const int* eps_targets,
+      const int* is_accept,
+      const int* str_offsets,
+      const int* str_data,
+      int* results
   );
   ```
 
@@ -83,7 +79,7 @@ algorithm_background: |
 # -- Hints by level --
 
 hints_l2: |
-  - Copy NFA data to GPU **once** in `solution_init`; reuse across all `solution_compute` calls
+  - Copy NFA data to GPU **once** inside `solution_compute`; keep state local to each call
   - Each thread processes one string independently (embarrassingly parallel)
   - Represent the active state set as a bitmask (uint32/uint64) for fast set operations
   - Pre-compute a transition bitmask table: `trans_bitmask[state][symbol]` = bitmask of targets
@@ -91,7 +87,7 @@ hints_l2: |
 hints_l1: |
   ### 1. Persistent GPU Data
   Copy `trans_offsets`, `trans_targets`, `eps_offsets`, `eps_targets`, `is_accept`,
-  `str_offsets`, `str_data` to device memory in `solution_init`. Pre-allocate output buffer.
+  `str_offsets`, `str_data` to device memory inside `solution_compute`. Pre-allocate output buffer.
 
   ### 2. One Thread Per String
   Launch N threads. Each thread processes its string independently using Thompson NFA simulation.
@@ -106,7 +102,7 @@ hints_l1: |
   For num_states ≤ 128: use `uint64_t[2]` (two 64-bit words).
 
   ### 4. Pre-compute Transition Bitmask Table
-  In `solution_init`, build a table `trans_bitmask[state * num_symbols + symbol]`
+  In `solution_compute` setup phase, build a table `trans_bitmask[state * num_symbols + symbol]`
   where each entry is a bitmask of target states. Store in device memory.
 
   Then each transition step becomes:

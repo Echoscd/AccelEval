@@ -1,4 +1,4 @@
-// task_io.cu -- monte_carlo GPU I/O adapter
+// task_io.cu — unified compute_only interface (auto-migrated)
 
 #include "orbench_io.h"
 #include <stdio.h>
@@ -6,62 +6,55 @@
 #include <string.h>
 #include <cuda_runtime.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-extern void solution_init(int N, int num_steps, float risk_free, float volatility,
-                          float strike, float spot, float time_to_maturity,
-                          unsigned int base_seed);
-extern void solution_compute(int N, float* payoffs);
-extern void solution_free(void);
-// Weak default: LLM does not need to implement solution_free
-extern "C" __attribute__((weak)) void solution_free(void) { }
-
-#ifdef __cplusplus
-}
-#endif
+extern "C" void solution_compute(int N,
+                             int num_steps,
+                             float risk_free,
+                             float volatility,
+                             float strike,
+                             float spot,
+                             float time_to_maturity,
+                             unsigned int base_seed,
+                             float* payoffs);
 
 typedef struct {
     int N;
+    int num_steps;
+    float risk_free;
+    float volatility;
+    float strike;
+    float spot;
+    float time_to_maturity;
+    unsigned int base_seed;
     float* payoffs;
 } MCContext;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void* task_setup(const TaskData* data, const char* data_dir) {
-    int N                  = (int)get_param(data, "N");
-    int num_steps          = (int)get_param(data, "num_steps");
+extern "C" void* task_setup(const TaskData* data, const char* data_dir) {
+    (void)data_dir;
+    MCContext* ctx = (MCContext*)calloc(1, sizeof(MCContext));
+    if (!ctx) return NULL;
     int risk_free_x10000   = (int)get_param(data, "risk_free_x10000");
     int volatility_x10000  = (int)get_param(data, "volatility_x10000");
     int strike_x100        = (int)get_param(data, "strike_x100");
     int spot_x100          = (int)get_param(data, "spot_x100");
     int time_x1000         = (int)get_param(data, "time_x1000");
-    unsigned int base_seed = (unsigned int)get_param(data, "base_seed");
-
-    float risk_free  = (float)risk_free_x10000 / 10000.0f;
-    float volatility = (float)volatility_x10000 / 10000.0f;
-    float strike     = (float)strike_x100 / 100.0f;
-    float spot       = (float)spot_x100 / 100.0f;
-    float time_to_maturity = (float)time_x1000 / 1000.0f;
-
-    MCContext* ctx = (MCContext*)calloc(1, sizeof(MCContext));
-    ctx->N = N;
-    ctx->payoffs = (float*)calloc((size_t)N, sizeof(float));
-
-    solution_init(N, num_steps, risk_free, volatility, strike, spot,
-                  time_to_maturity, base_seed);
+    ctx->N = (int)get_param(data, "N");
+    ctx->num_steps = (int)get_param(data, "num_steps");
+    ctx->risk_free = (float)risk_free_x10000 / 10000.0f;
+    ctx->volatility = (float)volatility_x10000 / 10000.0f;
+    ctx->strike = (float)strike_x100 / 100.0f;
+    ctx->spot = (float)spot_x100 / 100.0f;
+    ctx->time_to_maturity = (float)time_x1000 / 1000.0f;
+    ctx->base_seed = (unsigned int)get_param(data, "base_seed");
+    ctx->payoffs = (float*)calloc((size_t)(ctx->N), sizeof(float));
     return ctx;
 }
 
-void task_run(void* test_data) {
+extern "C" void task_run(void* test_data) {
     MCContext* ctx = (MCContext*)test_data;
-    solution_compute(ctx->N, ctx->payoffs);
+    solution_compute(ctx->N, ctx->num_steps, ctx->risk_free, ctx->volatility, ctx->strike, ctx->spot, ctx->time_to_maturity, ctx->base_seed, ctx->payoffs);
 }
 
-void task_write_output(void* test_data, const char* output_path) {
+extern "C" void task_write_output(void* test_data, const char* output_path) {
     MCContext* ctx = (MCContext*)test_data;
     FILE* f = fopen(output_path, "w");
     if (!f) return;
@@ -70,14 +63,9 @@ void task_write_output(void* test_data, const char* output_path) {
     fclose(f);
 }
 
-void task_cleanup(void* test_data) {
+extern "C" void task_cleanup(void* test_data) {
     if (!test_data) return;
     MCContext* ctx = (MCContext*)test_data;
-    solution_free();
     free(ctx->payoffs);
     free(ctx);
 }
-
-#ifdef __cplusplus
-}
-#endif

@@ -10,7 +10,7 @@ static int* g_edge_v;
 static float* g_edge_capacity;
 static int* g_edge_transit_time;
 
-void solution_init(
+static void _orbench_old_init(
     int num_nodes,
     int num_edges,
     int num_steps,
@@ -34,7 +34,7 @@ void solution_init(
     memcpy(g_edge_transit_time, edge_transit_time, num_edges * sizeof(int));
 }
 
-void solution_compute(float inflow_rate, float* out_total_arrived) {
+static void _orbench_old_compute(float inflow_rate, float* out_total_arrived) {
     float* node_flow = (float*)calloc(g_num_nodes, sizeof(float));
     float* queue_volume = (float*)calloc(g_num_edges, sizeof(float));
     float* pipeline = (float*)calloc(g_num_edges * 32, sizeof(float));
@@ -140,9 +140,14 @@ void solution_compute(float inflow_rate, float* out_total_arrived) {
     free(next_edge_next);
 }
 
-void solution_free(void) {
-    free(g_edge_u);
-    free(g_edge_v);
-    free(g_edge_capacity);
-    free(g_edge_transit_time);
+// ── Unified compute_only wrapper: batched over num_requests inflow rates ──
+void solution_compute(int num_nodes, int num_edges, int num_steps,
+                      const int* edge_u, const int* edge_v,
+                      const float* edge_capacity, const int* edge_transit_time,
+                      int num_requests, const float* inflow_rates, float* results) {
+    _orbench_old_init(num_nodes, num_edges, num_steps,
+                      edge_u, edge_v, edge_capacity, edge_transit_time);
+    for (int i = 0; i < num_requests; i++) {
+        _orbench_old_compute(inflow_rates[i], &results[i]);
+    }
 }

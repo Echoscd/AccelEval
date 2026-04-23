@@ -8,7 +8,7 @@
     "trajectory_similarity",
     "atomic_max"
   ],
-  "interface_mode": "init_compute",
+  "interface_mode": "compute_only",
   "input_sizes": {
     "small": {
       "num_spaces": 16,

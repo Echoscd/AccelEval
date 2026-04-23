@@ -9,7 +9,7 @@
     "embarrassingly_parallel",
     "position_integration"
   ],
-  "interface_mode": "init_compute",
+  "interface_mode": "compute_only",
   "input_sizes": {
     "small": {
       "N": 50000,

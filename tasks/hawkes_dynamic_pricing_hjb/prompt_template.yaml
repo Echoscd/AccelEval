@@ -12,7 +12,6 @@ interface: |
       const float* alpha0, const float* beta,
       float* U, float* Lambda
   );
-  void solution_free(void);
 
 input_size_notes: |
   - `batch_size`: Number of independent problem instances (e.g., 32).

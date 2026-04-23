@@ -15,7 +15,7 @@ static const int *g_out_degree = NULL;
 static float *g_scores = NULL;
 static float *g_outgoing = NULL;
 
-void solution_init(int n,
+static void _orbench_old_init(int n,
                    int max_iters,
                    const int *in_row_ptr,
                    const int *in_col_idx,
@@ -31,7 +31,7 @@ void solution_init(int n,
     g_outgoing = (float*)malloc((size_t)n * sizeof(float));
 }
 
-void solution_compute(float *scores_out) {
+static void _orbench_old_compute(float *scores_out) {
     if (!g_scores || !g_outgoing || g_n <= 0) return;
     const float init_score = 1.0f / (float)g_n;
     const float base_score = (1.0f - kDamp) / (float)g_n;
@@ -62,14 +62,8 @@ void solution_compute(float *scores_out) {
     memcpy(scores_out, g_scores, (size_t)g_n * sizeof(float));
 }
 
-void solution_free(void) {
-    if (g_scores) free(g_scores);
-    if (g_outgoing) free(g_outgoing);
-    g_scores = NULL;
-    g_outgoing = NULL;
-    g_in_row_ptr = NULL;
-    g_in_col_idx = NULL;
-    g_out_degree = NULL;
-    g_n = 0;
-    g_max_iters = 0;
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int n, int max_iters, const int * in_row_ptr, const int * in_col_idx, const int * out_degree, float * scores_out) {
+    _orbench_old_init(n, max_iters, in_row_ptr, in_col_idx, out_degree);
+    _orbench_old_compute(scores_out);
 }

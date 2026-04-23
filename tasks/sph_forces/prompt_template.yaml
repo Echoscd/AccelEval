@@ -19,37 +19,33 @@ task_description: |
 
 interface: |
   ```c
-  // Called once to receive all particle data and precomputed cell structure.
-  extern "C" void solution_init(
-      int N,                      // number of particles
-      const float* xs,            // HOST [N]: x positions
-      const float* ys,            // HOST [N]: y positions
-      const float* zs,            // HOST [N]: z positions
-      const float* vxs,           // HOST [N]: x velocities
-      const float* vys,           // HOST [N]: y velocities
-      const float* vzs,           // HOST [N]: z velocities
-      const float* rhos,          // HOST [N]: densities
-      const float* masses,        // HOST [N]: particle masses
-      float h,                    // smoothing length
-      float cs0,                  // speed of sound
-      float rhop0,                // reference density
-      float alpha_visc,           // artificial viscosity coefficient
-      const int* cell_begin,      // HOST [num_cells]: begin index per cell
-      const int* cell_end,        // HOST [num_cells]: end index per cell
-      const int* sorted_idx,      // HOST [N]: sorted particle indices
-      int grid_nx,                // grid cells in x
-      int grid_ny,                // grid cells in y
-      int grid_nz,                // grid cells in z
-      float cell_size             // cell size (= 2*h)
-  );
-
-  // Called multiple times (must be idempotent and synchronize before returning).
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
   extern "C" void solution_compute(
-      int N,                      // number of particles
-      float* ax,                  // HOST [N]: output x acceleration
-      float* ay,                  // HOST [N]: output y acceleration
-      float* az,                  // HOST [N]: output z acceleration
-      float* drhodt               // HOST [N]: output density rate of change
+      int N,
+      const float* xs,
+      const float* ys,
+      const float* zs,
+      const float* vxs,
+      const float* vys,
+      const float* vzs,
+      const float* rhos,
+      const float* masses,
+      float h,
+      float cs0,
+      float rhop0,
+      float alpha_visc,
+      const int* cell_begin,
+      const int* cell_end,
+      const int* sorted_idx,
+      int grid_nx,
+      int grid_ny,
+      int grid_nz,
+      float cell_size,
+      float* ax,
+      float* ay,
+      float* az,
+      float* drhodt
   );
   ```
 
@@ -116,14 +112,14 @@ algorithm_background: |
 hints_l2: |
   - One thread per particle i; each thread iterates over 27 neighbor cells
   - Main challenge: irregular memory access pattern (neighbor lists vary per particle)
-  - Pre-upload all arrays + cell structure to GPU in solution_init
+  - Pre-upload all arrays + cell structure to GPU inside solution_compute
   - Use registers to accumulate per-particle results (acex, acey, acez, arp1)
   - Shared memory can cache neighbor particle data within a warp tile
   - The Wendland kernel is cheap: main cost is memory access for neighbor data
 
 hints_l1: |
   ### 1. Data Transfer Strategy
-  In solution_init:
+  In solution_compute setup:
   - Allocate device buffers for all input arrays (8 float arrays + 3 int arrays)
   - cudaMemcpy all to device
   - Allocate output arrays (4 x N floats)

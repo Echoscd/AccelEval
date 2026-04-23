@@ -1,19 +1,36 @@
+// task_io.cu — unified compute_only interface (auto-migrated)
+
 #include "orbench_io.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <cuda_runtime.h>
 
-extern "C" void solution_init(int nx, int ny, int nz, int coarse_levels,
-                               int n, const int *row_ptr, const int *col_idx,
-                               const double *values, const int *diag_idx,
-                               const double *rhs);
-extern "C" void solution_compute(double *x_inout);
-extern "C" void solution_free(void);
+extern "C" void solution_compute(int nx,
+                             int ny,
+                             int nz,
+                             int coarse_levels,
+                             int n,
+                             const int * row_ptr,
+                             const int * col_idx,
+                             const double * values,
+                             const int * diag_idx,
+                             const double * rhs,
+                             double * x_inout);
 
 typedef struct {
+    int nx;
+    int ny;
+    int nz;
+    int coarse_levels;
     int n;
-    const double *x_init;
-    double *x_work;
+    const int * row_ptr;
+    const int * col_idx;
+    const double * values;
+    const int * diag_idx;
+    const double * rhs;
+    const double * x_init;
+    double * x_inout;
 } Ctx;
 
 static int* get_tensor_int_local(const TaskData* data, const char* name) {
@@ -36,54 +53,48 @@ static double* get_tensor_double_local(const TaskData* data, const char* name) {
 
 extern "C" void* task_setup(const TaskData* data, const char* data_dir) {
     (void)data_dir;
-    int nx = (int)get_param(data, "nx");
-    int ny = (int)get_param(data, "ny");
-    int nz = (int)get_param(data, "nz");
-    int n = (int)get_param(data, "n");
-    int coarse_levels = (int)get_param(data, "coarse_levels");
-    const int *row_ptr = get_tensor_int_local(data, "row_ptr");
-    const int *col_idx = get_tensor_int_local(data, "col_idx");
-    const double *values = get_tensor_double_local(data, "values");
-    const int *diag_idx = get_tensor_int_local(data, "diag_idx");
-    const double *rhs = get_tensor_double_local(data, "rhs");
-    const double *x_init = get_tensor_double_local(data, "x_init");
-    if (!row_ptr || !col_idx || !values || !diag_idx || !rhs || !x_init) {
-        fprintf(stderr, "[task_io] Missing HPCG MG input tensor\n");
-        return NULL;
-    }
-    solution_init(nx, ny, nz, coarse_levels, n, row_ptr, col_idx, values, diag_idx, rhs);
-    Ctx *ctx = (Ctx*)calloc(1, sizeof(Ctx));
+    Ctx* ctx = (Ctx*)calloc(1, sizeof(Ctx));
     if (!ctx) return NULL;
-    ctx->n = n;
-    ctx->x_init = x_init;
-    ctx->x_work = (double*)malloc((size_t)n * sizeof(double));
-    if (!ctx->x_work) {
+    ctx->nx = (int)get_param(data, "nx");
+    ctx->ny = (int)get_param(data, "ny");
+    ctx->nz = (int)get_param(data, "nz");
+    ctx->coarse_levels = (int)get_param(data, "coarse_levels");
+    ctx->n = (int)get_param(data, "n");
+    ctx->row_ptr = get_tensor_int_local(data, "row_ptr");
+    ctx->col_idx = get_tensor_int_local(data, "col_idx");
+    ctx->values = get_tensor_double_local(data, "values");
+    ctx->diag_idx = get_tensor_int_local(data, "diag_idx");
+    ctx->rhs = get_tensor_double_local(data, "rhs");
+    ctx->x_init = get_tensor_double_local(data, "x_init");
+
+    if (!ctx->row_ptr || !ctx->col_idx || !ctx->values || !ctx->diag_idx || !ctx->rhs || !ctx->x_init) {
+        fprintf(stderr, "[task_io] Missing tensor data\n");
         free(ctx);
         return NULL;
     }
+    ctx->x_inout = (double*)calloc((size_t)(ctx->n), sizeof(double));
     return ctx;
 }
 
 extern "C" void task_run(void* test_data) {
-    Ctx *ctx = (Ctx*)test_data;
-    memcpy(ctx->x_work, ctx->x_init, (size_t)ctx->n * sizeof(double));
-    solution_compute(ctx->x_work);
+    Ctx* ctx = (Ctx*)test_data;
+    memcpy((void*)ctx->x_inout, ctx->x_init, (size_t)ctx->n * sizeof(double));
+    solution_compute(ctx->nx, ctx->ny, ctx->nz, ctx->coarse_levels, ctx->n, ctx->row_ptr, ctx->col_idx, ctx->values, ctx->diag_idx, ctx->rhs, ctx->x_inout);
 }
 
 extern "C" void task_write_output(void* test_data, const char* output_path) {
-    Ctx *ctx = (Ctx*)test_data;
+    Ctx* ctx = (Ctx*)test_data;
     FILE *f = fopen(output_path, "w");
     if (!f) return;
     for (int i = 0; i < ctx->n; ++i) {
-        fprintf(f, "%.17e\n", ctx->x_work[i]);
+        fprintf(f, "%.17e\n", ctx->x_inout[i]);
     }
     fclose(f);
 }
 
 extern "C" void task_cleanup(void* test_data) {
-    Ctx *ctx = (Ctx*)test_data;
-    if (!ctx) return;
-    solution_free();
-    free(ctx->x_work);
+    if (!test_data) return;
+    Ctx* ctx = (Ctx*)test_data;
+    free(ctx->x_inout);
     free(ctx);
 }

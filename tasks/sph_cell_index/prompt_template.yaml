@@ -18,25 +18,21 @@ task_description: |
 
 interface: |
   ```c
-  // Called once to receive particle positions and grid parameters.
-  extern "C" void solution_init(
-      int N,                      // number of particles
-      const float* xs,            // HOST [N]: x positions
-      const float* ys,            // HOST [N]: y positions
-      const float* zs,            // HOST [N]: z positions
-      float cell_size,            // uniform cell size
-      int grid_nx,                // number of cells in x
-      int grid_ny,                // number of cells in y
-      int grid_nz                 // number of cells in z
-  );
-
-  // Called multiple times (must be idempotent and synchronize before returning).
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
   extern "C" void solution_compute(
-      int N,                      // number of particles
-      int num_cells,              // total cells = grid_nx * grid_ny * grid_nz
-      int* sorted_indices,        // HOST [N]: particle indices in sorted order
-      int* cell_begin,            // HOST [num_cells]: first particle index for each cell (-1 if empty)
-      int* cell_end               // HOST [num_cells]: one-past-last particle index (-1 if empty)
+      int N,
+      const float* xs,
+      const float* ys,
+      const float* zs,
+      float cell_size,
+      int grid_nx,
+      int grid_ny,
+      int grid_nz,
+      int num_cells,
+      int* sorted_indices,
+      int* cell_begin,
+      int* cell_end
   );
   ```
 
@@ -88,7 +84,7 @@ hints_l2: |
   - Step 2 (sort) is the bottleneck: use CUB DeviceRadixSort or Thrust sort_by_key
   - Step 3 (begin/end) is parallel: each thread checks if its cell_id differs from predecessor
   - Use shared memory in Step 3 (as DualSPHysics does) for the boundary detection
-  - Pre-allocate all device memory in solution_init
+  - Pre-allocate all device memory inside solution_compute
 
 hints_l1: |
   ### 1. Cell Assignment Kernel

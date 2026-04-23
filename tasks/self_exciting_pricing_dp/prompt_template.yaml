@@ -12,7 +12,6 @@ interface: |
       float lambda_min, float lambda_max,
       float* V_out
   );
-  void solution_free(void);
 
 input_size_notes: |
   - N_x: Number of states (up to 100,000)

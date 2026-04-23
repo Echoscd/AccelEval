@@ -203,7 +203,7 @@ static dataType getPriceCpu(dataType val, dataType strikeVal, dataType discountV
 
 // ===== Public interface =====
 
-void solution_init(int N, int num_steps, float risk_free, float volatility,
+static void _orbench_old_init(int N, int num_steps, float risk_free, float volatility,
                    float strike, float spot, float time_to_maturity,
                    unsigned int base_seed)
 {
@@ -219,7 +219,7 @@ void solution_init(int N, int num_steps, float risk_free, float volatility,
     g_optionStruct.discountVal = exp(-risk_free * time_to_maturity);
 }
 
-void solution_compute(int N, float* samplePrices)
+static void _orbench_old_compute(int N, float* samplePrices)
 {
     dataType dt = 1.0 / (dataType)g_sequenceLength;
     int numSample;
@@ -240,7 +240,8 @@ void solution_compute(int N, float* samplePrices)
     }
 }
 
-void solution_free(void)
-{
-    /* Nothing to free — all state is static. */
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int N, int num_steps, float risk_free, float volatility, float strike, float spot, float time_to_maturity, unsigned int base_seed, float* payoffs) {
+    _orbench_old_init(N, num_steps, risk_free, volatility, strike, spot, time_to_maturity, base_seed);
+    _orbench_old_compute(N, payoffs);
 }

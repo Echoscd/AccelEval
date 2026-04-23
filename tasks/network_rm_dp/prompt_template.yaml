@@ -27,7 +27,7 @@ task_description: |
 interface: |
   ```c
   // This task uses the compute_only interface.
-  // There is NO solution_init. ALL work must happen inside solution_compute,
+  // There is NO solution_compute setup. ALL work must happen inside solution_compute,
   // including GPU memory allocation, data upload, kernel execution, and result download.
   // The ENTIRE execution of solution_compute is timed.
 
@@ -46,7 +46,6 @@ interface: |
   );
 
   // Optional: release any GPU resources (called after timing).
-  extern "C" void solution_free(void);
   ```
 
 input_size_notes: |

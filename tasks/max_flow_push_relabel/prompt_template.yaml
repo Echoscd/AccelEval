@@ -11,18 +11,18 @@ task_description: |
 
 interface: |
   ```c
-  extern "C" void solution_init(
-      int          num_nodes,
-      int          num_arcs,       // E directed arcs
-      const int*   tails,          // [E] tail of each arc
-      const int*   heads,          // [E] head of each arc
-      const int*   caps,           // [E] capacity of each arc
-      int          source,
-      int          sink
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
+  extern "C" void solution_compute(
+      int num_nodes,
+      int num_arcs,
+      const int* tails,
+      const int* heads,
+      const int* caps,
+      int source,
+      int sink,
+      int* max_flow_out
   );
-
-  // Compute max flow. Output is a single integer.
-  extern "C" void solution_compute(int num_nodes, int* max_flow_out);
   ```
 
 input_size_notes: |

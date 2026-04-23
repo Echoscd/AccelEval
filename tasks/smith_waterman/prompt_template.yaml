@@ -37,7 +37,6 @@ interface: |
       int* scores                 // host, [N], output: best local-alignment score per pair
   );
 
-  extern "C" void solution_free(void);
   ```
 
 input_size_notes: |
@@ -90,7 +89,6 @@ hints_l1: |
 
   ### 4. Workspace reuse
   Since `solution_compute` may be called repeatedly, persistent device buffers managed by
-  `solution_free` can reduce allocation overhead, as long as results remain correct and
   deterministic.
 
   ### 5. Variable-length handling

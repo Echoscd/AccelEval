@@ -17,7 +17,7 @@ static unsigned char* g_updating_graph_mask = NULL;
 static unsigned char* g_graph_visited = NULL;
 static int* g_cost = NULL;
 
-void solution_init(int num_nodes, int num_edges, int source,
+static void _orbench_old_init(int num_nodes, int num_edges, int source,
                    const int* node_start,
                    const int* node_degree,
                    const int* edge_dst) {
@@ -41,7 +41,7 @@ void solution_init(int num_nodes, int num_edges, int source,
     }
 }
 
-void solution_compute(int* out_dist) {
+static void _orbench_old_compute(int* out_dist) {
     if (!g_graph_mask || !g_updating_graph_mask || !g_graph_visited || !g_cost) return;
 
     int stop;
@@ -74,23 +74,14 @@ void solution_compute(int* out_dist) {
     memcpy(out_dist, g_cost, (size_t)g_num_nodes * sizeof(int));
 }
 
-void solution_free(void) {
-    free(g_graph_mask);
-    free(g_updating_graph_mask);
-    free(g_graph_visited);
-    free(g_cost);
-    g_graph_mask = NULL;
-    g_updating_graph_mask = NULL;
-    g_graph_visited = NULL;
-    g_cost = NULL;
-    g_node_start = NULL;
-    g_node_degree = NULL;
-    g_edge_dst = NULL;
-    g_num_nodes = 0;
-    g_num_edges = 0;
-    g_source = 0;
-}
+
 
 #ifdef __cplusplus
 }
 #endif
+
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int num_nodes, int num_edges, int source, const int* node_start, const int* node_degree, const int* edge_dst, int* out_dist) {
+    _orbench_old_init(num_nodes, num_edges, source, node_start, node_degree, edge_dst);
+    _orbench_old_compute(out_dist);
+}

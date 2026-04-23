@@ -85,7 +85,7 @@ static int SampleFrequentElement(const int *comp, int n, int num_samples) {
     return best_key;
 }
 
-void solution_init(int n,
+static void _orbench_old_init(int n,
                    int neighbor_rounds,
                    int num_samples,
                    const int *row_ptr,
@@ -104,7 +104,7 @@ void solution_init(int n,
     }
 }
 
-void solution_compute(int *comp_out) {
+static void _orbench_old_compute(int *comp_out) {
     if (!comp_out || g_n <= 0 || !g_row_ptr || !g_col_idx || !g_comp) {
         return;
     }
@@ -143,14 +143,8 @@ void solution_compute(int *comp_out) {
     }
 }
 
-void solution_free(void) {
-    g_n = 0;
-    g_neighbor_rounds = 0;
-    g_num_samples = 0;
-    g_row_ptr = NULL;
-    g_col_idx = NULL;
-    if (g_comp) {
-        free(g_comp);
-        g_comp = NULL;
-    }
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int n, int neighbor_rounds, int num_samples, const int * row_ptr, const int * col_idx, int * comp_out) {
+    _orbench_old_init(n, neighbor_rounds, num_samples, row_ptr, col_idx);
+    _orbench_old_compute(comp_out);
 }

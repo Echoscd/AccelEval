@@ -10,7 +10,7 @@
     "date_arithmetic",
     "forward_pricing"
   ],
-  "interface_mode": "init_compute",
+  "interface_mode": "compute_only",
   "input_sizes": {
     "small": {
       "N": 100000,

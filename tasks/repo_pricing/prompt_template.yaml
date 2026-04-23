@@ -17,32 +17,28 @@ task_description: |
 
 interface: |
   ```c
-  extern "C" void solution_init(
-      int N,
-      const int* settle_year,      // host, [N]
-      const int* settle_month,     // host, [N]
-      const int* settle_day,       // host, [N]
-      const int* delivery_year,    // host, [N]
-      const int* delivery_month,   // host, [N]
-      const int* delivery_day,     // host, [N]
-      const int* issue_year,       // host, [N]
-      const int* issue_month,      // host, [N]
-      const int* issue_day,        // host, [N]
-      const int* maturity_year,    // host, [N]
-      const int* maturity_month,   // host, [N]
-      const int* maturity_day,     // host, [N]
-      const float* bond_rates,     // host, [N], coupon rates
-      const float* repo_rates,     // host, [N], repo rates
-      const float* bond_clean_prices, // host, [N]
-      const float* dummy_strikes   // host, [N]
-  );
-
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
   extern "C" void solution_compute(
-      int N,                        // number of repos
-      float* prices                 // host, [N*12], output per repo
+      int N,
+      const int* settle_year,
+      const int* settle_month,
+      const int* settle_day,
+      const int* delivery_year,
+      const int* delivery_month,
+      const int* delivery_day,
+      const int* issue_year,
+      const int* issue_month,
+      const int* issue_day,
+      const int* maturity_year,
+      const int* maturity_month,
+      const int* maturity_day,
+      const float* bond_rates,
+      const float* repo_rates,
+      const float* bond_clean_prices,
+      const float* dummy_strikes,
+      float* prices
   );
-
-  extern "C" void solution_free(void);
   ```
 
 input_size_notes: |
@@ -100,7 +96,7 @@ algorithm_background: |
   Each repo is completely independent -- embarrassingly parallel.
 
 hints_l2: |
-  - Copy all 16 input arrays to GPU in `solution_init`
+  - Copy all 16 input arrays to GPU inside `solution_compute`
   - Launch one thread per repo
   - Each thread independently computes all 12 output values
   - Date lookup tables (yearOffset, isLeap) can be cached in shared/constant memory
@@ -108,7 +104,7 @@ hints_l2: |
 
 hints_l1: |
   ### 1. Persistent GPU Data
-  In `solution_init`, copy all 12 date arrays + 4 float arrays to device.
+  In `solution_compute` setup phase, copy all 12 date arrays + 4 float arrays to device.
   Pre-allocate `prices` output buffer on device (N*12 floats).
 
   ### 2. One Thread Per Repo

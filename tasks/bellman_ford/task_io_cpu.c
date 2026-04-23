@@ -1,41 +1,50 @@
-// task_io_cpu.c — bellman_ford CPU I/O adapter layer
-//
-// Same logic as task_io.cu, but pure C (no cuda_runtime.h).
-// Build: gcc -O2 -I framework/
-//        framework/harness_cpu.c tasks/bellman_ford/task_io_cpu.c
-//        tasks/bellman_ford/cpu_reference.c -o solution_cpu -lm
+// task_io_cpu.c — bellman_ford unified compute_only interface (CPU)
 
 #include "orbench_io.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-// ===== LLM / CPU-baseline interface (two functions) =====
-extern void solution_init(int V, int E,
-                          const int* h_row_offsets,
-                          const int* h_col_indices,
-                          const float* h_weights);
-
-extern void solution_compute(int num_requests,
+extern void solution_compute(int V, int E,
+                             const int* h_row_offsets,
+                             const int* h_col_indices,
+                             const float* h_weights,
+                             int num_requests,
                              const int* h_sources,
                              const int* h_targets,
                              float* h_distances);
 
-// ===== task_io internal state (identical to task_io.cu) =====
 typedef struct {
+    int V;
+    int E;
+    const int* h_row_offsets;
+    const int* h_col_indices;
+    const float* h_weights;
     int num_requests;
-    int* sources;
-    int* targets;
-    float* distances;
+    int* h_sources;
+    int* h_targets;
+    float* h_distances;
 } TaskIOContext;
 
-static TaskIOContext* parse_requests(const char* data_dir) {
+void* task_setup(const TaskData* data, const char* data_dir) {
     TaskIOContext* ctx = (TaskIOContext*)calloc(1, sizeof(TaskIOContext));
+    if (!ctx) return NULL;
+
+    ctx->V = (int)get_param(data, "V");
+    ctx->E = (int)get_param(data, "E");
+    ctx->h_row_offsets = get_tensor_int(data, "row_offsets");
+    ctx->h_col_indices = get_tensor_int(data, "col_indices");
+    ctx->h_weights = get_tensor_float(data, "weights");
+    if (!ctx->h_row_offsets || !ctx->h_col_indices || !ctx->h_weights) {
+        fprintf(stderr, "[task_io] Missing tensor data\n");
+        free(ctx);
+        return NULL;
+    }
+
     char path[512];
     snprintf(path, sizeof(path), "%s/requests.txt", data_dir);
     FILE* f = fopen(path, "r");
-    if (!f) { free(ctx); return NULL; }
-
+    if (!f) { fprintf(stderr, "[task_io] Missing requests.txt\n"); free(ctx); return NULL; }
     char line[256];
     int n = 0;
     while (fgets(line, sizeof(line), f)) {
@@ -45,16 +54,15 @@ static TaskIOContext* parse_requests(const char* data_dir) {
     rewind(f);
 
     ctx->num_requests = n;
-    ctx->sources   = (int*)malloc(n * sizeof(int));
-    ctx->targets   = (int*)malloc(n * sizeof(int));
-    ctx->distances = (float*)calloc(n, sizeof(float));
-
+    ctx->h_sources   = (int*)calloc((size_t)n, sizeof(int));
+    ctx->h_targets   = (int*)calloc((size_t)n, sizeof(int));
+    ctx->h_distances = (float*)calloc((size_t)n, sizeof(float));
     int idx = 0;
     while (fgets(line, sizeof(line), f)) {
         int s, t;
         if (sscanf(line, "%d %d", &s, &t) == 2) {
-            ctx->sources[idx] = s;
-            ctx->targets[idx] = t;
+            ctx->h_sources[idx] = s;
+            ctx->h_targets[idx] = t;
             idx++;
         }
     }
@@ -62,29 +70,12 @@ static TaskIOContext* parse_requests(const char* data_dir) {
     return ctx;
 }
 
-// ===== harness calls these four functions =====
-void* task_setup(const TaskData* data, const char* data_dir) {
-    int V = (int)get_param(data, "V");
-    int E = (int)get_param(data, "E");
-    solution_init(V, E,
-                  get_tensor_int(data, "row_offsets"),
-                  get_tensor_int(data, "col_indices"),
-                  get_tensor_float(data, "weights"));
-
-    TaskIOContext* ctx = parse_requests(data_dir);
-    if (!ctx) {
-        fprintf(stderr, "[task_io] Failed to parse requests.txt\n");
-        return NULL;
-    }
-    return ctx;
-}
-
 void task_run(void* test_data) {
     TaskIOContext* ctx = (TaskIOContext*)test_data;
-    solution_compute(ctx->num_requests,
-                     ctx->sources,
-                     ctx->targets,
-                     ctx->distances);
+    solution_compute(ctx->V, ctx->E,
+                     ctx->h_row_offsets, ctx->h_col_indices, ctx->h_weights,
+                     ctx->num_requests, ctx->h_sources, ctx->h_targets,
+                     ctx->h_distances);
 }
 
 void task_write_output(void* test_data, const char* output_path) {
@@ -92,16 +83,15 @@ void task_write_output(void* test_data, const char* output_path) {
     FILE* f = fopen(output_path, "w");
     if (!f) return;
     for (int i = 0; i < ctx->num_requests; i++)
-        fprintf(f, "%.6e\n", ctx->distances[i]);
+        fprintf(f, "%.6e\n", ctx->h_distances[i]);
     fclose(f);
 }
 
 void task_cleanup(void* test_data) {
     if (!test_data) return;
     TaskIOContext* ctx = (TaskIOContext*)test_data;
-    free(ctx->sources);
-    free(ctx->targets);
-    free(ctx->distances);
+    free(ctx->h_sources);
+    free(ctx->h_targets);
+    free(ctx->h_distances);
     free(ctx);
 }
-

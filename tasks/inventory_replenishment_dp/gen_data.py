@@ -78,8 +78,8 @@ except ImportError:
 
 SIZES = {
     "small": {"N_I": 10, "N_B": 10, "N_Phi": 10, "N_Psi": 10, "N_x": 10, "N_phi": 10, "T": 5, "seed": 42},
-    "medium": {"N_I": 20, "N_B": 20, "N_Phi": 20, "N_Psi": 20, "N_x": 16, "N_phi": 16, "T": 10, "seed": 42},
-    "large": {"N_I": 24, "N_B": 24, "N_Phi": 24, "N_Psi": 24, "N_x": 24, "N_phi": 24, "T": 12, "seed": 42}
+    "medium": {"N_I": 14, "N_B": 14, "N_Phi": 14, "N_Psi": 14, "N_x": 14, "N_phi": 14, "T": 6, "seed": 42},
+    "large": {"N_I": 18, "N_B": 18, "N_Phi": 18, "N_Psi": 18, "N_x": 18, "N_phi": 18, "T": 8, "seed": 42}
 }
 
 if HAS_NUMBA:

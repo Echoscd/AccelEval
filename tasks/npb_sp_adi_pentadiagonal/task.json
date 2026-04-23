@@ -3,30 +3,47 @@
   "name": "NPB SP Structured ADI Pentadiagonal Sweep",
   "category": "cfd_solver",
   "difficulty": 4,
-  "tags": ["npb", "sp", "adi", "pentadiagonal", "structured_grid", "cfd"],
-
+  "tags": [
+    "npb",
+    "sp",
+    "adi",
+    "pentadiagonal",
+    "structured_grid",
+    "cfd"
+  ],
   "input_sizes": {
-    "small":  {"n": 24, "iters": 6,  "omega_milli": 900, "seed": 42},
-    "medium": {"n": 40, "iters": 8,  "omega_milli": 900, "seed": 42},
-    "large":  {"n": 56, "iters": 10, "omega_milli": 900, "seed": 42}
+    "small": {
+      "n": 24,
+      "iters": 6,
+      "omega_milli": 900,
+      "seed": 42
+    },
+    "medium": {
+      "n": 40,
+      "iters": 8,
+      "omega_milli": 900,
+      "seed": 42
+    },
+    "large": {
+      "n": 56,
+      "iters": 10,
+      "omega_milli": 900,
+      "seed": 42
+    }
   },
-
   "correctness": {
     "mode": "numeric",
-    "atol": 1e-7,
-    "rtol": 1e-7
+    "atol": 1e-07,
+    "rtol": 1e-07
   },
-
+  "interface_mode": "compute_only",
   "timing": {
     "warmup": 2,
     "trials": 5,
     "timeout": 240
   },
-
-  "interface_mode": "init_compute",
   "build_command": "",
   "extra_build_flags": "",
-
   "gpu_optimization_points": [
     "x_y_z_line_solve_parallelism",
     "batched_pentadiagonal_solves",

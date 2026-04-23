@@ -16,22 +16,13 @@ task_description: |
 
 interface: |
   ```c
-  // Called once: store host pointers to point and offset arrays.
-  // points_xy:     [num_points * 2] interleaved (x,y) float32
-  // space_offsets: [num_spaces]     int32, starting index of each space
-  extern "C" void solution_init(
-      int          num_points,
-      int          num_spaces,
-      const float* points_xy,
-      const int*   space_offsets
-  );
-
-  // Called multiple times. Must synchronize before returning.
-  // results: [num_spaces * num_spaces] float32
-  //   results[rhs * num_spaces + lhs] = h(space_lhs -> space_rhs)
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
   extern "C" void solution_compute(
-      int    num_points,
-      int    num_spaces,
+      int num_points,
+      int num_spaces,
+      const float* points_xy,
+      const int* space_offsets,
       float* results
   );
   ```
@@ -91,7 +82,7 @@ hints_l2: |
 
 hints_l1: |
   ### 1. Data Transfer
-  - In `solution_init`: `cudaMalloc` and `cudaMemcpy` `points_xy` (as
+  - In `solution_compute` setup phase: `cudaMalloc` and `cudaMemcpy` `points_xy` (as
     `vec_2d` or `float2`) and `space_offsets`. Allocate `d_results` once.
   - In `solution_compute`: launch init kernel (set d_results to -1), launch
     main kernel, then `cudaMemcpy` to host.

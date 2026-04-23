@@ -10,7 +10,7 @@
     "sparse_matrix_vector",
     "proximal_operator"
   ],
-  "interface_mode": "init_compute",
+  "interface_mode": "compute_only",
   "input_sizes": {
     "small": {
       "num_vars": 500,

@@ -11,7 +11,7 @@
     "linear_algebra",
     "memory_bandwidth"
   ],
-  "interface_mode": "init_compute",
+  "interface_mode": "compute_only",
   "input_sizes": {
     "small": {
       "num_rows": 4096,

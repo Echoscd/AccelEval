@@ -18,3 +18,20 @@ notes:
   - Preserve the CPU reference semantics.
   - The dominant work is CSR SpMV plus global reductions.
   - Avoid repeated host-device transfers inside the iteration loop.
+
+interface: |
+  ```c
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
+  extern "C" void solution_compute(
+      int n,
+      int nnz,
+      int max_iters,
+      int tol_exp,
+      const int * row_ptr,
+      const int * col_idx,
+      const double * values,
+      const double * b,
+      double * x_out
+  );
+  ```

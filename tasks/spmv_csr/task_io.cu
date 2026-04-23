@@ -1,63 +1,55 @@
-// task_io.cu -- spmv_csr GPU I/O adapter
+// task_io.cu — unified compute_only interface (auto-migrated)
 
 #include "orbench_io.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <cuda_runtime.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-extern void solution_init(int num_rows, int num_cols,
-                          const int* col_ptrs, const int* row_indices,
-                          const float* values, const float* vector);
-extern void solution_compute(int num_cols, float* answer);
-extern void solution_free(void);
-// Weak default: LLM does not need to implement solution_free
-extern "C" __attribute__((weak)) void solution_free(void) { }
-
-#ifdef __cplusplus
-}
-#endif
+extern "C" void solution_compute(int num_rows,
+                             int num_cols,
+                             const int* col_ptrs,
+                             const int* row_indices,
+                             const float* values,
+                             const float* vector,
+                             float* answer);
 
 typedef struct {
-    int    num_cols;
+    int num_rows;
+    int num_cols;
+    const int* col_ptrs;
+    const int* row_indices;
+    const float* values;
+    const float* vector;
     float* answer;
 } SpMVContext;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void* task_setup(const TaskData* data, const char* data_dir) {
+extern "C" void* task_setup(const TaskData* data, const char* data_dir) {
     (void)data_dir;
-    int num_rows = (int)get_param(data, "num_rows");
-    int num_cols = (int)get_param(data, "num_cols");
+    SpMVContext* ctx = (SpMVContext*)calloc(1, sizeof(SpMVContext));
+    if (!ctx) return NULL;
+    ctx->num_rows = (int)get_param(data, "num_rows");
+    ctx->num_cols = (int)get_param(data, "num_cols");
+    ctx->col_ptrs = get_tensor_int(data, "col_ptrs");
+    ctx->row_indices = get_tensor_int(data, "row_indices");
+    ctx->values = get_tensor_float(data, "values");
+    ctx->vector = get_tensor_float(data, "vector");
 
-    const int*   col_ptrs    = get_tensor_int(data, "col_ptrs");
-    const int*   row_indices = get_tensor_int(data, "row_indices");
-    const float* values      = get_tensor_float(data, "values");
-    const float* vector      = get_tensor_float(data, "vector");
-    if (!col_ptrs || !row_indices || !values || !vector) {
-        fprintf(stderr, "[task_io] missing required tensors for spmv_csr\n");
+    if (!ctx->col_ptrs || !ctx->row_indices || !ctx->values || !ctx->vector) {
+        fprintf(stderr, "[task_io] Missing tensor data\n");
+        free(ctx);
         return NULL;
     }
-
-    SpMVContext* ctx = (SpMVContext*)calloc(1, sizeof(SpMVContext));
-    ctx->num_cols = num_cols;
-    ctx->answer   = (float*)calloc((size_t)num_cols, sizeof(float));
-
-    solution_init(num_rows, num_cols, col_ptrs, row_indices, values, vector);
+    ctx->answer = (float*)calloc((size_t)(ctx->num_cols), sizeof(float));
     return ctx;
 }
 
-void task_run(void* test_data) {
+extern "C" void task_run(void* test_data) {
     SpMVContext* ctx = (SpMVContext*)test_data;
-    solution_compute(ctx->num_cols, ctx->answer);
+    solution_compute(ctx->num_rows, ctx->num_cols, ctx->col_ptrs, ctx->row_indices, ctx->values, ctx->vector, ctx->answer);
 }
 
-void task_write_output(void* test_data, const char* output_path) {
+extern "C" void task_write_output(void* test_data, const char* output_path) {
     SpMVContext* ctx = (SpMVContext*)test_data;
     FILE* f = fopen(output_path, "w");
     if (!f) return;
@@ -66,14 +58,9 @@ void task_write_output(void* test_data, const char* output_path) {
     fclose(f);
 }
 
-void task_cleanup(void* test_data) {
+extern "C" void task_cleanup(void* test_data) {
     if (!test_data) return;
     SpMVContext* ctx = (SpMVContext*)test_data;
-    solution_free();
     free(ctx->answer);
     free(ctx);
 }
-
-#ifdef __cplusplus
-}
-#endif

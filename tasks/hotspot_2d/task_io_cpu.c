@@ -1,39 +1,50 @@
+// task_io_cpu.c — unified compute_only interface (auto-migrated)
+
 #include "orbench_io.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-extern void solution_init(int rows, int cols, int iters,
-                          const float* temp0,
-                          const float* power);
-extern void solution_compute(float* out_temp);
-extern void solution_free(void);
+void solution_compute(int rows,
+                             int cols,
+                             int iters,
+                             const float* temp0,
+                             const float* power,
+                             float* out_temp);
 
 typedef struct {
+    int rows;
+    int cols;
+    int iters;
+    const float* temp0;
+    const float* power;
     int n;
     float* out_temp;
 } TaskIOContext;
 
 void* task_setup(const TaskData* data, const char* data_dir) {
     (void)data_dir;
-    int rows = (int)get_param(data, "rows");
-    int cols = (int)get_param(data, "cols");
-    int iters = (int)get_param(data, "iters");
-    const float* temp0 = get_tensor_float(data, "temp0");
-    const float* power = get_tensor_float(data, "power");
-    if (!temp0 || !power) {
-        fprintf(stderr, "[task_io_cpu] Missing tensor data\n");
+    TaskIOContext* ctx = (TaskIOContext*)calloc(1, sizeof(TaskIOContext));
+    if (!ctx) return NULL;
+    ctx->rows = (int)get_param(data, "rows");
+    ctx->cols = (int)get_param(data, "cols");
+    ctx->iters = (int)get_param(data, "iters");
+    ctx->temp0 = get_tensor_float(data, "temp0");
+    ctx->power = get_tensor_float(data, "power");
+
+    if (!ctx->temp0 || !ctx->power) {
+        fprintf(stderr, "[task_io] Missing tensor data\n");
+        free(ctx);
         return NULL;
     }
-    solution_init(rows, cols, iters, temp0, power);
-    TaskIOContext* ctx = (TaskIOContext*)calloc(1, sizeof(TaskIOContext));
-    ctx->n = rows * cols;
-    ctx->out_temp = (float*)calloc((size_t)ctx->n, sizeof(float));
+    ctx->n = ctx->rows * ctx->cols;
+    ctx->out_temp = (float*)calloc((size_t)(ctx->n), sizeof(float));
     return ctx;
 }
 
 void task_run(void* test_data) {
     TaskIOContext* ctx = (TaskIOContext*)test_data;
-    solution_compute(ctx->out_temp);
+    solution_compute(ctx->rows, ctx->cols, ctx->iters, ctx->temp0, ctx->power, ctx->out_temp);
 }
 
 void task_write_output(void* test_data, const char* output_path) {
@@ -49,7 +60,6 @@ void task_write_output(void* test_data, const char* output_path) {
 void task_cleanup(void* test_data) {
     if (!test_data) return;
     TaskIOContext* ctx = (TaskIOContext*)test_data;
-    solution_free();
     free(ctx->out_temp);
     free(ctx);
 }

@@ -18,28 +18,24 @@ task_description: |
 
 interface: |
   ```c
-  extern "C" void solution_init(
-      int          num_vars,
-      int          num_constraints,
-      int          nnz,
-      int          num_iters,
-      const float* obj,            // c [num_vars]
-      const float* var_lb,         // l_x [num_vars]
-      const float* var_ub,         // u_x [num_vars]
-      const float* con_lb,         // l_c [num_constraints]
-      const float* con_ub,         // u_c [num_constraints]
-      const int*   col_ptrs,       // CSC column pointers [num_vars + 1]
-      const int*   row_indices,    // CSC row indices [nnz]
-      const float* values,         // CSC values [nnz]
-      float        step_size,      // eta
-      float        primal_weight   // rho
-  );
-
-  // Run K PDHG iterations, output averaged primal.
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
   extern "C" void solution_compute(
-      int    num_vars,
-      int    num_constraints,
-      float* primal_out            // [num_vars]
+      int num_vars,
+      int num_constraints,
+      int nnz,
+      int num_iters,
+      const float* obj,
+      const float* var_lb,
+      const float* var_ub,
+      const float* con_lb,
+      const float* con_ub,
+      const int* col_ptrs,
+      const int* row_indices,
+      const float* values,
+      float step_size,
+      float primal_weight,
+      float* primal_out
   );
   ```
 
@@ -79,7 +75,7 @@ algorithm_background: |
 
 hints_l2: |
   - Two SpMVs dominate runtime. Use cuSPARSE cusparseSpMV for both.
-  - Upload A to device once in solution_init (CSR or CSC format).
+  - Upload A to device once inside solution_compute (CSR or CSC format).
   - Primal/dual updates are embarrassingly parallel element-wise ops.
   - Fuse primal update + extrapolation into one kernel.
   - Keep all state on device; only copy primal_avg to host at the end.
@@ -88,7 +84,7 @@ hints_l1: |
   ### 1. Data Layout
   - Convert CSC to CSR on host (transpose) for efficient cusparseSpMV
   - Or use CSC directly with cusparseSpMV CUSPARSE_OPERATION_TRANSPOSE
-  - Upload A, c, bounds once in solution_init
+  - Upload A, c, bounds once inside solution_compute
 
   ### 2. Per-Iteration Kernel Sequence
   ```

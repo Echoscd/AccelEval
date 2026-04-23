@@ -6,19 +6,16 @@ task_description: |
 
 interface: |
   ```c
-  extern "C" void solution_init(
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
+  extern "C" void solution_compute(
       int rows,
       int cols,
       int iters,
       const float* temp0,
-      const float* power
+      const float* power,
+      float* out_temp
   );
-
-  extern "C" void solution_compute(
-      float* out_temp   // host, length rows*cols
-  );
-
-  extern "C" void solution_free(void);
   ```
 
 input_size_notes: |
@@ -48,7 +45,7 @@ hints_l2: |
 
 hints_l1: |
   ### 1. Persistent device allocations
-  Allocate device buffers for `src`, `dst`, and `power` in `solution_init`.
+  Allocate device buffers for `src`, `dst`, and `power` inside `solution_compute`.
 
   ### 2. Iterative stencil kernel
   For each iteration, launch a 2D kernel that updates one cell per thread.

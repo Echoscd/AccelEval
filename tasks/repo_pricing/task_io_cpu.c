@@ -1,72 +1,84 @@
-// task_io_cpu.c -- repo_pricing CPU I/O adapter
+// task_io_cpu.c — unified compute_only interface (auto-migrated)
 
 #include "orbench_io.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-extern void solution_init(int N,
-                          const int* settle_year, const int* settle_month, const int* settle_day,
-                          const int* delivery_year, const int* delivery_month, const int* delivery_day,
-                          const int* issue_year, const int* issue_month, const int* issue_day,
-                          const int* maturity_year, const int* maturity_month, const int* maturity_day,
-                          const float* bond_rates, const float* repo_rates,
-                          const float* bond_clean_prices, const float* dummy_strikes);
-extern void solution_compute(int N, float* prices);
-extern void solution_free(void);
-
-// Weak default: LLM does not need to implement solution_free
-__attribute__((weak)) void solution_free(void) { }
+void solution_compute(int N,
+                             const int* settle_year,
+                             const int* settle_month,
+                             const int* settle_day,
+                             const int* delivery_year,
+                             const int* delivery_month,
+                             const int* delivery_day,
+                             const int* issue_year,
+                             const int* issue_month,
+                             const int* issue_day,
+                             const int* maturity_year,
+                             const int* maturity_month,
+                             const int* maturity_day,
+                             const float* bond_rates,
+                             const float* repo_rates,
+                             const float* bond_clean_prices,
+                             const float* dummy_strikes,
+                             float* prices);
 
 typedef struct {
     int N;
+    const int* settle_year;
+    const int* settle_month;
+    const int* settle_day;
+    const int* delivery_year;
+    const int* delivery_month;
+    const int* delivery_day;
+    const int* issue_year;
+    const int* issue_month;
+    const int* issue_day;
+    const int* maturity_year;
+    const int* maturity_month;
+    const int* maturity_day;
+    const float* bond_rates;
+    const float* repo_rates;
+    const float* bond_clean_prices;
+    const float* dummy_strikes;
     float* prices;
 } RepoContext;
 
 void* task_setup(const TaskData* data, const char* data_dir) {
-    int N = (int)get_param(data, "N");
+    (void)data_dir;
+    RepoContext* ctx = (RepoContext*)calloc(1, sizeof(RepoContext));
+    if (!ctx) return NULL;
+    ctx->N = (int)get_param(data, "N");
+    ctx->settle_year = get_tensor_int(data, "settle_year");
+    ctx->settle_month = get_tensor_int(data, "settle_month");
+    ctx->settle_day = get_tensor_int(data, "settle_day");
+    ctx->delivery_year = get_tensor_int(data, "delivery_year");
+    ctx->delivery_month = get_tensor_int(data, "delivery_month");
+    ctx->delivery_day = get_tensor_int(data, "delivery_day");
+    ctx->issue_year = get_tensor_int(data, "issue_year");
+    ctx->issue_month = get_tensor_int(data, "issue_month");
+    ctx->issue_day = get_tensor_int(data, "issue_day");
+    ctx->maturity_year = get_tensor_int(data, "maturity_year");
+    ctx->maturity_month = get_tensor_int(data, "maturity_month");
+    ctx->maturity_day = get_tensor_int(data, "maturity_day");
+    ctx->bond_rates = get_tensor_float(data, "bond_rates");
+    ctx->repo_rates = get_tensor_float(data, "repo_rates");
+    ctx->bond_clean_prices = get_tensor_float(data, "bond_clean_prices");
+    ctx->dummy_strikes = get_tensor_float(data, "dummy_strikes");
 
-    const int* settle_year     = get_tensor_int(data, "settle_year");
-    const int* settle_month    = get_tensor_int(data, "settle_month");
-    const int* settle_day      = get_tensor_int(data, "settle_day");
-    const int* delivery_year   = get_tensor_int(data, "delivery_year");
-    const int* delivery_month  = get_tensor_int(data, "delivery_month");
-    const int* delivery_day    = get_tensor_int(data, "delivery_day");
-    const int* issue_year      = get_tensor_int(data, "issue_year");
-    const int* issue_month     = get_tensor_int(data, "issue_month");
-    const int* issue_day       = get_tensor_int(data, "issue_day");
-    const int* maturity_year   = get_tensor_int(data, "maturity_year");
-    const int* maturity_month  = get_tensor_int(data, "maturity_month");
-    const int* maturity_day    = get_tensor_int(data, "maturity_day");
-    const float* bond_rates       = get_tensor_float(data, "bond_rates");
-    const float* repo_rates       = get_tensor_float(data, "repo_rates");
-    const float* bond_clean_prices = get_tensor_float(data, "bond_clean_prices");
-    const float* dummy_strikes    = get_tensor_float(data, "dummy_strikes");
-
-    if (!settle_year || !settle_month || !settle_day ||
-        !delivery_year || !delivery_month || !delivery_day ||
-        !issue_year || !issue_month || !issue_day ||
-        !maturity_year || !maturity_month || !maturity_day ||
-        !bond_rates || !repo_rates || !bond_clean_prices || !dummy_strikes) {
+    if (!ctx->settle_year || !ctx->settle_month || !ctx->settle_day || !ctx->delivery_year || !ctx->delivery_month || !ctx->delivery_day || !ctx->issue_year || !ctx->issue_month || !ctx->issue_day || !ctx->maturity_year || !ctx->maturity_month || !ctx->maturity_day || !ctx->bond_rates || !ctx->repo_rates || !ctx->bond_clean_prices || !ctx->dummy_strikes) {
         fprintf(stderr, "[task_io] Missing tensor data\n");
+        free(ctx);
         return NULL;
     }
-
-    RepoContext* ctx = (RepoContext*)calloc(1, sizeof(RepoContext));
-    ctx->N = N;
-    ctx->prices = (float*)calloc((size_t)N * 12, sizeof(float));
-
-    solution_init(N, settle_year, settle_month, settle_day,
-                  delivery_year, delivery_month, delivery_day,
-                  issue_year, issue_month, issue_day,
-                  maturity_year, maturity_month, maturity_day,
-                  bond_rates, repo_rates, bond_clean_prices, dummy_strikes);
+    ctx->prices = (float*)calloc((size_t)(ctx->N * 12), sizeof(float));
     return ctx;
 }
 
 void task_run(void* test_data) {
     RepoContext* ctx = (RepoContext*)test_data;
-    solution_compute(ctx->N, ctx->prices);
+    solution_compute(ctx->N, ctx->settle_year, ctx->settle_month, ctx->settle_day, ctx->delivery_year, ctx->delivery_month, ctx->delivery_day, ctx->issue_year, ctx->issue_month, ctx->issue_day, ctx->maturity_year, ctx->maturity_month, ctx->maturity_day, ctx->bond_rates, ctx->repo_rates, ctx->bond_clean_prices, ctx->dummy_strikes, ctx->prices);
 }
 
 void task_write_output(void* test_data, const char* output_path) {
@@ -87,7 +99,6 @@ void task_write_output(void* test_data, const char* output_path) {
 void task_cleanup(void* test_data) {
     if (!test_data) return;
     RepoContext* ctx = (RepoContext*)test_data;
-    solution_free();
     free(ctx->prices);
     free(ctx);
 }

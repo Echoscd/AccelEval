@@ -385,7 +385,7 @@ static void getOutValOptionCpu(optionInputStruct* options, float* outputVals,
 
 // ===== Public interface =====
 
-void solution_init(int N,
+static void _orbench_old_init(int N,
                    const int* types, const float* strikes, const float* spots,
                    const float* qs, const float* rs, const float* ts,
                    const float* vols)
@@ -400,7 +400,7 @@ void solution_init(int N,
     g_vols = vols;
 }
 
-void solution_compute(int N, float* prices)
+static void _orbench_old_compute(int N, float* prices)
 {
     // Build optionInputStruct array from flat arrays (bridge to original interface)
     optionInputStruct* options = (optionInputStruct*)malloc(N * sizeof(optionInputStruct));
@@ -425,7 +425,8 @@ void solution_compute(int N, float* prices)
     free(options);
 }
 
-void solution_free(void)
-{
-    /* All data owned by task_io; nothing to free here. */
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int N, const int* types, const float* strikes, const float* spots, const float* qs, const float* rs, const float* ts, const float* vols, float* prices) {
+    _orbench_old_init(N, types, strikes, spots, qs, rs, ts, vols);
+    _orbench_old_compute(N, prices);
 }

@@ -1,15 +1,25 @@
+// task_io.cu — unified compute_only interface (auto-migrated)
+
 #include "orbench_io.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <cuda_runtime.h>
 
-extern "C" void solution_init(int n, int iters, int omega_milli,
-                               const double *u0, const double *rhs);
-extern "C" void solution_compute(double *residual_out);
-extern "C" void solution_free(void);
+extern "C" void solution_compute(int n,
+                             int iters,
+                             int omega_milli,
+                             const double * u0,
+                             const double * rhs,
+                             double * residual_out);
 
 typedef struct {
-    double residuals[5];
+    int n;
+    int iters;
+    int omega_milli;
+    const double * u0;
+    const double * rhs;
+    double * residual_out;
 } SPTaskContext;
 
 static double* get_tensor_double_local(const TaskData* data, const char* name) {
@@ -25,34 +35,39 @@ static double* get_tensor_double_local(const TaskData* data, const char* name) {
 
 extern "C" void* task_setup(const TaskData* data, const char* data_dir) {
     (void)data_dir;
-    int n = (int)get_param(data, "n");
-    int iters = (int)get_param(data, "iters");
-    int omega_milli = (int)get_param(data, "omega_milli");
-    const double *u0 = get_tensor_double_local(data, "u0");
-    const double *rhs = get_tensor_double_local(data, "rhs");
-    if (!u0 || !rhs) {
-        fprintf(stderr, "[task_io] Missing SP input tensor\n");
+    SPTaskContext* ctx = (SPTaskContext*)calloc(1, sizeof(SPTaskContext));
+    if (!ctx) return NULL;
+    ctx->n = (int)get_param(data, "n");
+    ctx->iters = (int)get_param(data, "iters");
+    ctx->omega_milli = (int)get_param(data, "omega_milli");
+    ctx->u0 = get_tensor_double_local(data, "u0");
+    ctx->rhs = get_tensor_double_local(data, "rhs");
+
+    if (!ctx->u0 || !ctx->rhs) {
+        fprintf(stderr, "[task_io] Missing tensor data\n");
+        free(ctx);
         return NULL;
     }
-    solution_init(n, iters, omega_milli, u0, rhs);
-    return calloc(1, sizeof(SPTaskContext));
+    ctx->residual_out = (double*)calloc((size_t)(5), sizeof(double));
+    return ctx;
 }
 
 extern "C" void task_run(void* test_data) {
-    SPTaskContext *ctx = (SPTaskContext*)test_data;
-    solution_compute(ctx->residuals);
+    SPTaskContext* ctx = (SPTaskContext*)test_data;
+    solution_compute(ctx->n, ctx->iters, ctx->omega_milli, ctx->u0, ctx->rhs, ctx->residual_out);
 }
 
 extern "C" void task_write_output(void* test_data, const char* output_path) {
-    SPTaskContext *ctx = (SPTaskContext*)test_data;
+    SPTaskContext* ctx = (SPTaskContext*)test_data;
     FILE *f = fopen(output_path, "w");
     if (!f) return;
-    for (int i = 0; i < 5; ++i) fprintf(f, "%.15e\n", ctx->residuals[i]);
+    for (int i = 0; i < 5; ++i) fprintf(f, "%.15e\n", ctx->residual_out[i]);
     fclose(f);
 }
 
 extern "C" void task_cleanup(void* test_data) {
     if (!test_data) return;
-    solution_free();
-    free(test_data);
+    SPTaskContext* ctx = (SPTaskContext*)test_data;
+    free(ctx->residual_out);
+    free(ctx);
 }

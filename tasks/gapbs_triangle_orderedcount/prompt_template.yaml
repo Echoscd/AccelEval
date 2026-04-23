@@ -20,3 +20,15 @@ notes:
   - Count a triangle only when u > v > w, matching GAPBS OrderedCount.
   - A two-pointer intersection on sorted neighborhoods is the intended core
     primitive.
+
+interface: |
+  ```c
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
+  extern "C" void solution_compute(
+      int n,
+      const int * row_ptr,
+      const int * col_idx,
+      unsigned long long * triangle_count_out
+  );
+  ```

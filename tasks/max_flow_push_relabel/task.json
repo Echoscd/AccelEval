@@ -10,7 +10,7 @@
     "graph",
     "preflow"
   ],
-  "interface_mode": "init_compute",
+  "interface_mode": "compute_only",
   "input_sizes": {
     "small": {
       "num_nodes": 1000,
@@ -18,13 +18,13 @@
       "seed": 42
     },
     "medium": {
-      "num_nodes": 10000,
-      "num_arcs": 50000,
+      "num_nodes": 5000,
+      "num_arcs": 25000,
       "seed": 42
     },
     "large": {
-      "num_nodes": 50000,
-      "num_arcs": 250000,
+      "num_nodes": 20000,
+      "num_arcs": 100000,
       "seed": 42
     }
   },

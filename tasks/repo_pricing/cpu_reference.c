@@ -1249,7 +1249,7 @@ static void getRepoResultsCpu(inArgsStruct inArgs, resultsStruct results, int to
 
 // ===== Interface functions =====
 
-void solution_init(int N,
+static void _orbench_old_init(int N,
                    const int* settle_year, const int* settle_month, const int* settle_day,
                    const int* delivery_year, const int* delivery_month, const int* delivery_day,
                    const int* issue_year, const int* issue_month, const int* issue_day,
@@ -1330,7 +1330,7 @@ void solution_init(int N,
 }
 
 
-void solution_compute(int N, float* prices)
+static void _orbench_old_compute(int N, float* prices)
 {
 	getRepoResultsCpu(g_inArgs, g_results, N);
 
@@ -1352,29 +1352,8 @@ void solution_compute(int N, float* prices)
 	}
 }
 
-
-void solution_free(void)
-{
-	free(g_inArgs.discountCurve);
-	free(g_inArgs.repoCurve);
-	free(g_inArgs.settlementDate);
-	free(g_inArgs.deliveryDate);
-	free(g_inArgs.maturityDate);
-	free(g_inArgs.repoDeliveryDate);
-	free(g_inArgs.bondCleanPrice);
-	free(g_inArgs.bond);
-	free(g_inArgs.dummyStrike);
-
-	free(g_results.dirtyPrice);
-	free(g_results.accruedAmountSettlement);
-	free(g_results.accruedAmountDeliveryDate);
-	free(g_results.cleanPrice);
-	free(g_results.forwardSpotIncome);
-	free(g_results.underlyingBondFwd);
-	free(g_results.repoNpv);
-	free(g_results.repoCleanForwardPrice);
-	free(g_results.repoDirtyForwardPrice);
-	free(g_results.repoImpliedYield);
-	free(g_results.marketRepoRate);
-	free(g_results.bondForwardVal);
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int N, const int* settle_year, const int* settle_month, const int* settle_day, const int* delivery_year, const int* delivery_month, const int* delivery_day, const int* issue_year, const int* issue_month, const int* issue_day, const int* maturity_year, const int* maturity_month, const int* maturity_day, const float* bond_rates, const float* repo_rates, const float* bond_clean_prices, const float* dummy_strikes, float* prices) {
+    _orbench_old_init(N, settle_year, settle_month, settle_day, delivery_year, delivery_month, delivery_day, issue_year, issue_month, issue_day, maturity_year, maturity_month, maturity_day, bond_rates, repo_rates, bond_clean_prices, dummy_strikes);
+    _orbench_old_compute(N, prices);
 }

@@ -16,34 +16,23 @@ task_description: |
 
 interface: |
   ```c
-  // Called once to receive particle data (host pointers).
-  extern "C" void solution_init(
-      int N,                      // number of particles
-      const float* posxy_x,       // HOST [N]: x positions (float32)
-      const float* posxy_y,       // HOST [N]: y positions (float32)
-      const float* posz,          // HOST [N]: z positions (float32)
-      const float* movxy_x,       // HOST [N]: x displacements (float32)
-      const float* movxy_y,       // HOST [N]: y displacements (float32)
-      const float* movz,          // HOST [N]: z displacements (float32)
-      float cell_size             // cell size for spatial hashing
-  );
-
-  // Called multiple times (must be idempotent and synchronize before returning).
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
   extern "C" void solution_compute(
-      int N,                      // number of particles
-      double* out_x,              // HOST [N]: output x positions
-      double* out_y,              // HOST [N]: output y positions
-      double* out_z,              // HOST [N]: output z positions
-      int* out_cell               // HOST [N]: linearized cell index
+      int N,
+      const float* posxy_x,
+      const float* posxy_y,
+      const float* posz,
+      const float* movxy_x,
+      const float* movxy_y,
+      const float* movz,
+      float cell_size,
+      double* out_x,
+      double* out_y,
+      double* out_z,
+      int* out_cell
   );
   ```
-
-  **Cell encoding (IMPORTANT)**: For each particle compute integer cell indices
-  `cx = (int)floor(rx / cell_size)`, `cy = (int)floor(ry / cell_size)`,
-  `cz = (int)floor(rz / cell_size)` and encode as
-  `out_cell[i] = cx + cy * 1000 + cz * 1000000`. Do NOT use bit-packed
-  DualSPHysics cellcodes — use this simple linear encoding to match the
-  CPU reference output exactly.
 
 input_size_notes: |
   | Size   | N (particles) |
@@ -89,13 +78,13 @@ algorithm_background: |
 hints_l2: |
   - Each particle is independent -- one thread per particle, trivially parallel
   - All arrays are contiguous -- coalesced memory access is natural
-  - Pre-upload all arrays to GPU in solution_init, copy results back in solution_compute
+  - Pre-upload all arrays to GPU inside solution_compute, copy results back in solution_compute
   - This is bandwidth-bound: minimize memory transactions
   - Consider using vectorized loads (double2) to match DualSPHysics data layout
 
 hints_l1: |
   ### 1. Data Transfer Strategy
-  In solution_init:
+  In solution_compute setup:
   - Allocate device buffers for 6 input arrays (double) + 3 output arrays (double) + 1 output (int)
   - cudaMemcpy all inputs to device (done once)
 

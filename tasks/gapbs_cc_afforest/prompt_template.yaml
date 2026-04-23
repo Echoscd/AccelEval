@@ -14,6 +14,19 @@ output:
 notes:
   - The graph is undirected and stored in CSR.
   - Match the CPU reference semantics exactly.
-  - Preserve the Afforest structure: sparse sampled rounds, component
-    compression, largest-component estimate, then final linking.
+  - "Preserve the Afforest structure: sparse sampled rounds, component compression, largest-component estimate, then final linking."
   - The output is the final compressed component-label array.
+
+interface: |
+  ```c
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
+  extern "C" void solution_compute(
+      int n,
+      int neighbor_rounds,
+      int num_samples,
+      const int * row_ptr,
+      const int * col_idx,
+      int * comp_out
+  );
+  ```

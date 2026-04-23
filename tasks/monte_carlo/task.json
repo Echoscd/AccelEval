@@ -8,18 +8,18 @@
     "stochastic_simulation",
     "random_number_generation"
   ],
-  "interface_mode": "init_compute",
+  "interface_mode": "compute_only",
   "input_sizes": {
     "small": {
       "N": 100000,
       "seed": 42
     },
     "medium": {
-      "N": 1000000,
+      "N": 500000,
       "seed": 42
     },
     "large": {
-      "N": 5000000,
+      "N": 2000000,
       "seed": 42
     }
   },

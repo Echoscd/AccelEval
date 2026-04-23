@@ -30,7 +30,6 @@ task_description: |
 
 interface: |
   void solution_compute(int S, int A, int T, float gamma, const float* rew, const float* P_up, const float* P_down, float* V);
-  void solution_free(void);
 
 input_size_notes: |
   - S is the number of states, up to 2000

@@ -17,21 +17,13 @@ task_description: |
 
 interface: |
   ```c
-  // Called once: store host pointers.
-  // subjects: [num_entries, num_features] row-major float32
-  // query:    [num_features]              float32
-  extern "C" void solution_init(
-      int          num_entries,
-      int          num_features,
-      const float* subjects,
-      const float* query
-  );
-
-  // Called multiple times. Must synchronize before returning.
-  // distances: [num_entries] float32, one DTW distance per subject
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
   extern "C" void solution_compute(
-      int    num_entries,
-      int    num_features,
+      int num_entries,
+      int num_features,
+      const float* subjects,
+      const float* query,
       float* distances
   );
   ```
@@ -84,7 +76,7 @@ hints_l2: |
 
 hints_l1: |
   ### 1. Data Transfer
-  - In `solution_init`: `cudaMalloc` and `cudaMemcpy` subjects + query (once).
+  - In `solution_compute` setup phase: `cudaMalloc` and `cudaMemcpy` subjects + query (once).
     Allocate output `d_distances` and any DP scratch up front.
   - In `solution_compute`: launch kernel(s), then copy `d_distances` to host.
 

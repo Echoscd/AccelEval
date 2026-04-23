@@ -6,13 +6,13 @@ static int g_n = 0;
 static const int *g_row_ptr = NULL;
 static const int *g_col_idx = NULL;
 
-void solution_init(int n, const int *row_ptr, const int *col_idx) {
+static void _orbench_old_init(int n, const int *row_ptr, const int *col_idx) {
     g_n = n;
     g_row_ptr = row_ptr;
     g_col_idx = col_idx;
 }
 
-void solution_compute(unsigned long long *triangle_count_out) {
+static void _orbench_old_compute(unsigned long long *triangle_count_out) {
     uint64_t total = 0;
     if (!triangle_count_out || g_n <= 0 || !g_row_ptr || !g_col_idx) {
         return;
@@ -46,8 +46,8 @@ void solution_compute(unsigned long long *triangle_count_out) {
     *triangle_count_out = (unsigned long long)total;
 }
 
-void solution_free(void) {
-    g_n = 0;
-    g_row_ptr = NULL;
-    g_col_idx = NULL;
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int n, const int * row_ptr, const int * col_idx, unsigned long long * triangle_count_out) {
+    _orbench_old_init(n, row_ptr, col_idx);
+    _orbench_old_compute(triangle_count_out);
 }

@@ -28,9 +28,9 @@ from framework.orbench_io_py import write_input_bin
 
 
 SIZES = {
-    "small":  {"m": 2, "n": 4, "T": 100, "L": 10, "cap_max": 20, "seed": 42},
-    "medium": {"m": 3, "n": 8, "T": 300, "L": 20, "cap_max": 30, "seed": 42},
-    "large":  {"m": 4, "n": 12, "T": 500, "L": 30, "cap_max": 40, "seed": 42},
+    "small": {"m": 2, "n": 4, "T": 100, "L": 10, "cap_max": 20, "seed": 42},
+    "medium": {"m": 3, "n": 6, "T": 200, "L": 15, "cap_max": 25, "seed": 42},
+    "large": {"m": 3, "n": 8, "T": 300, "L": 20, "cap_max": 30, "seed": 42},
 }
 
 

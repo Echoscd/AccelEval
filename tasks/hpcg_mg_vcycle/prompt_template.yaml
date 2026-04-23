@@ -21,3 +21,22 @@ notes:
   - Restriction uses rc[i] = rf[f2c[i]] - Axf[f2c[i]].
   - Prolongation adds the coarse correction back at the mapped fine-grid points.
   - Output must match the CPU reference within the configured numeric tolerance.
+
+interface: |
+  ```c
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
+  extern "C" void solution_compute(
+      int nx,
+      int ny,
+      int nz,
+      int coarse_levels,
+      int n,
+      const int * row_ptr,
+      const int * col_idx,
+      const double * values,
+      const int * diag_idx,
+      const double * rhs,
+      double * x_inout
+  );
+  ```

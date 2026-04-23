@@ -18,3 +18,17 @@ notes:
   - The algorithm uses scalar pentadiagonal line solves along x, y, and z.
   - Local component-coupling transforms happen between the directional solves.
   - Avoid repeated host-device transfers across iterations.
+
+interface: |
+  ```c
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
+  extern "C" void solution_compute(
+      int n,
+      int iters,
+      int omega_milli,
+      const double * u0,
+      const double * rhs,
+      double * residual_out
+  );
+  ```

@@ -229,7 +229,7 @@ static void solve_axis(int axis, const double *in, double *out) {
     }
 }
 
-void solution_init(int n, int iters, int omega_milli, const double *u0, const double *rhs) {
+static void _orbench_old_init(int n, int iters, int omega_milli, const double *u0, const double *rhs) {
     g_n = n;
     g_iters = iters;
     g_omega = ((double)omega_milli) / 1000.0;
@@ -250,7 +250,7 @@ void solution_init(int n, int iters, int omega_milli, const double *u0, const do
     memcpy(g_rhs, rhs, total * sizeof(double));
 }
 
-void solution_compute(double *residual_out) {
+static void _orbench_old_compute(double *residual_out) {
     size_t total = (size_t)g_n * (size_t)g_n * (size_t)g_n * 5u;
     for (int it = 0; it < g_iters; ++it) {
         apply_operator(g_u, g_aux);
@@ -277,10 +277,8 @@ void solution_compute(double *residual_out) {
     for (int m = 0; m < 5; ++m) residual_out[m] = sqrt(residual_out[m] / (double)cells);
 }
 
-void solution_free(void) {
-    free(g_u); free(g_rhs); free(g_res); free(g_tmp1); free(g_tmp2); free(g_tmp3); free(g_aux);
-    g_u = g_rhs = g_res = g_tmp1 = g_tmp2 = g_tmp3 = g_aux = NULL;
-    g_n = 0;
-    g_iters = 0;
-    g_omega = 1.0;
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int n, int iters, int omega_milli, const double * u0, const double * rhs, double * residual_out) {
+    _orbench_old_init(n, iters, omega_milli, u0, rhs);
+    _orbench_old_compute(residual_out);
 }

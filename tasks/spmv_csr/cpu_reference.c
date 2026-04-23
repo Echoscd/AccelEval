@@ -69,7 +69,7 @@ static void TransposedMatrixVectorProduct(
 
 // ===== Public interface =====
 
-void solution_init(int          num_rows,
+static void _orbench_old_init(int          num_rows,
                    int          num_cols,
                    const int*   col_ptrs,
                    const int*   row_indices,
@@ -84,13 +84,14 @@ void solution_init(int          num_rows,
     g_vector      = vector;
 }
 
-void solution_compute(int num_cols, float* answer)
+static void _orbench_old_compute(int num_cols, float* answer)
 {
     TransposedMatrixVectorProduct(num_cols, g_col_ptrs, g_row_indices,
                                  g_values, g_vector, answer);
 }
 
-void solution_free(void)
-{
-    /* All input data owned by task_io; nothing to free here. */
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int num_rows, int num_cols, const int* col_ptrs, const int* row_indices, const float* values, const float* vector, float* answer) {
+    _orbench_old_init(num_rows, num_cols, col_ptrs, row_indices, values, vector);
+    _orbench_old_compute(num_cols, answer);
 }

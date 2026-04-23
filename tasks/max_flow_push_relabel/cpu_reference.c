@@ -235,7 +235,7 @@ static long long Solve(void) {
 
 // ===== Public interface =====
 
-void solution_init(int  num_nodes,
+static void _orbench_old_init(int  num_nodes,
                    int  num_arcs,       // E user arcs
                    const int* tails,    // [E]
                    const int* heads,    // [E]
@@ -301,23 +301,13 @@ void solution_init(int  num_nodes,
     g_active_top   = 0;
 }
 
-void solution_compute(int num_nodes, int* max_flow_out)
+static void _orbench_old_compute(int num_nodes, int* max_flow_out)
 {
     *max_flow_out = (int)Solve();
 }
 
-void solution_free(void)
-{
-    free(g_arc_head);     g_arc_head = NULL;
-    free(g_arc_opposite); g_arc_opposite = NULL;
-    free(g_initial_cap);  g_initial_cap = NULL;
-    free(g_residual);     g_residual = NULL;
-    free(g_adj_start);    g_adj_start = NULL;
-    free(g_adj_list);     g_adj_list = NULL;
-    free(g_excess);       g_excess = NULL;
-    free(g_height);       g_height = NULL;
-    free(g_first_arc);    g_first_arc = NULL;
-    free(g_bfs_queue);    g_bfs_queue = NULL;
-    free(g_in_queue);     g_in_queue = NULL;
-    free(g_active_stack); g_active_stack = NULL;
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int num_nodes, int num_arcs, const int* tails, const int* heads, const int* caps, int source, int sink, int* max_flow_out) {
+    _orbench_old_init(num_nodes, num_arcs, tails, heads, caps, source, sink);
+    _orbench_old_compute(num_nodes, max_flow_out);
 }

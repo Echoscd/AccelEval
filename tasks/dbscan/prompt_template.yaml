@@ -24,25 +24,16 @@ task_description: |
 
 interface: |
   ```c
-  // Called once. Store point data and parameters.
-  extern "C" void solution_init(
-      int N,                    // number of points
-      const float* xs,          // HOST [N]: x coordinates
-      const float* ys,          // HOST [N]: y coordinates
-      float eps,                // epsilon distance threshold
-      int minPts                // minimum neighbors to be a core point
-  );
-
-  // Called multiple times (must be idempotent).
-  // Compute DBSCAN clustering and write cluster labels.
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
   extern "C" void solution_compute(
-      int N,                    // number of points
-      int* labels               // HOST [N]: output cluster labels
-                                //   > 0: cluster ID
-                                //   -2: noise (NOISE)
+      int N,
+      const float* xs,
+      const float* ys,
+      float eps,
+      int minPts,
+      int* labels
   );
-
-  extern "C" void solution_free(void);
   ```
 
 input_size_notes: |

@@ -19,7 +19,7 @@ static int i_min(int a, int b) {
     return (a <= b) ? a : b;
 }
 
-void solution_init(int rows, int cols, const int* wall) {
+static void _orbench_old_init(int rows, int cols, const int* wall) {
     g_rows = rows;
     g_cols = cols;
     g_wall = wall;
@@ -30,7 +30,7 @@ void solution_init(int rows, int cols, const int* wall) {
     g_next = (int*)malloc((size_t)cols * sizeof(int));
 }
 
-void solution_compute(int* out_costs) {
+static void _orbench_old_compute(int* out_costs) {
     if (!g_wall || !g_prev || !g_next || g_rows <= 0 || g_cols <= 0 || !out_costs) {
         return;
     }
@@ -65,20 +65,14 @@ void solution_compute(int* out_costs) {
     memcpy(out_costs, src, (size_t)g_cols * sizeof(int));
 }
 
-void solution_free(void) {
-    if (g_prev) {
-        free(g_prev);
-        g_prev = NULL;
-    }
-    if (g_next) {
-        free(g_next);
-        g_next = NULL;
-    }
-    g_rows = 0;
-    g_cols = 0;
-    g_wall = NULL;
-}
+
 
 #ifdef __cplusplus
 }
 #endif
+
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int rows, int cols, const int* wall, int* out_costs) {
+    _orbench_old_init(rows, cols, wall);
+    _orbench_old_compute(out_costs);
+}

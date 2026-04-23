@@ -1,19 +1,24 @@
+// task_io_cpu.c — unified compute_only interface (auto-migrated)
+
 #include "orbench_io.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-extern void solution_init(int n,
-                          int neighbor_rounds,
-                          int num_samples,
-                          const int *row_ptr,
-                          const int *col_idx);
-extern void solution_compute(int *comp_out);
-extern void solution_free(void);
+void solution_compute(int n,
+                             int neighbor_rounds,
+                             int num_samples,
+                             const int * row_ptr,
+                             const int * col_idx,
+                             int * comp_out);
 
 typedef struct {
     int n;
-    int *comp_out;
+    int neighbor_rounds;
+    int num_samples;
+    const int * row_ptr;
+    const int * col_idx;
+    int * comp_out;
 } CCTaskContext;
 
 static int* get_tensor_int_local(const TaskData* data, const char* name) {
@@ -29,34 +34,30 @@ static int* get_tensor_int_local(const TaskData* data, const char* name) {
 
 void* task_setup(const TaskData* data, const char* data_dir) {
     (void)data_dir;
-    int n = (int)get_param(data, "n");
-    int neighbor_rounds = (int)get_param(data, "neighbor_rounds");
-    int num_samples = (int)get_param(data, "num_samples");
-    const int *row_ptr = get_tensor_int_local(data, "row_ptr");
-    const int *col_idx = get_tensor_int_local(data, "col_idx");
-    if (!row_ptr || !col_idx) {
-        fprintf(stderr, "[task_io] Missing GAPBS CC input tensor\n");
-        return NULL;
-    }
-    solution_init(n, neighbor_rounds, num_samples, row_ptr, col_idx);
-    CCTaskContext *ctx = (CCTaskContext*)calloc(1, sizeof(CCTaskContext));
+    CCTaskContext* ctx = (CCTaskContext*)calloc(1, sizeof(CCTaskContext));
     if (!ctx) return NULL;
-    ctx->n = n;
-    ctx->comp_out = (int*)malloc((size_t)n * sizeof(int));
-    if (!ctx->comp_out) {
+    ctx->n = (int)get_param(data, "n");
+    ctx->neighbor_rounds = (int)get_param(data, "neighbor_rounds");
+    ctx->num_samples = (int)get_param(data, "num_samples");
+    ctx->row_ptr = get_tensor_int_local(data, "row_ptr");
+    ctx->col_idx = get_tensor_int_local(data, "col_idx");
+
+    if (!ctx->row_ptr || !ctx->col_idx) {
+        fprintf(stderr, "[task_io] Missing tensor data\n");
         free(ctx);
         return NULL;
     }
+    ctx->comp_out = (int*)calloc((size_t)(ctx->n), sizeof(int));
     return ctx;
 }
 
 void task_run(void* test_data) {
-    CCTaskContext *ctx = (CCTaskContext*)test_data;
-    solution_compute(ctx->comp_out);
+    CCTaskContext* ctx = (CCTaskContext*)test_data;
+    solution_compute(ctx->n, ctx->neighbor_rounds, ctx->num_samples, ctx->row_ptr, ctx->col_idx, ctx->comp_out);
 }
 
 void task_write_output(void* test_data, const char* output_path) {
-    CCTaskContext *ctx = (CCTaskContext*)test_data;
+    CCTaskContext* ctx = (CCTaskContext*)test_data;
     FILE *f = fopen(output_path, "w");
     if (!f) return;
     for (int i = 0; i < ctx->n; ++i) {
@@ -66,9 +67,8 @@ void task_write_output(void* test_data, const char* output_path) {
 }
 
 void task_cleanup(void* test_data) {
-    CCTaskContext *ctx = (CCTaskContext*)test_data;
-    if (!ctx) return;
-    solution_free();
+    if (!test_data) return;
+    CCTaskContext* ctx = (CCTaskContext*)test_data;
     free(ctx->comp_out);
     free(ctx);
 }

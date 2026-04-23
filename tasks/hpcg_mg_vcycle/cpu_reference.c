@@ -147,7 +147,7 @@ static void mg_vcycle(int level_idx, const double *rhs, double *x) {
     symgs(L, rhs, x);
 }
 
-void solution_init(int nx, int ny, int nz, int coarse_levels,
+static void _orbench_old_init(int nx, int ny, int nz, int coarse_levels,
                    int n, const int *row_ptr, const int *col_idx,
                    const double *values, const int *diag_idx,
                    const double *rhs) {
@@ -204,28 +204,13 @@ void solution_init(int nx, int ny, int nz, int coarse_levels,
     }
 }
 
-void solution_compute(double *x_inout) {
+static void _orbench_old_compute(double *x_inout) {
     if (!g_levels) return;
     mg_vcycle(0, g_rhs0, x_inout);
 }
 
-void solution_free(void) {
-    if (!g_levels) return;
-    for (int l = 0; l < g_num_levels; ++l) {
-        Level *L = &g_levels[l];
-        free(L->f2c);
-        free(L->Axf);
-        free(L->rc);
-        free(L->xc);
-        if (L->owns_matrix) {
-            free(L->row_ptr_owned);
-            free(L->col_idx_owned);
-            free(L->values_owned);
-            free(L->diag_idx_owned);
-        }
-    }
-    free(g_levels);
-    g_levels = NULL;
-    g_num_levels = 0;
-    g_rhs0 = NULL;
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int nx, int ny, int nz, int coarse_levels, int n, const int * row_ptr, const int * col_idx, const double * values, const int * diag_idx, const double * rhs, double * x_inout) {
+    _orbench_old_init(nx, ny, nz, coarse_levels, n, row_ptr, col_idx, values, diag_idx, rhs);
+    _orbench_old_compute(x_inout);
 }

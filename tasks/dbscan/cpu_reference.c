@@ -31,7 +31,7 @@ static real   g_eps;       // epsilon radius
 static int    g_minPts;    // minimum points for core
 static point* g_points;    // point array (owned, copied from input)
 
-void solution_init(int N, const float* xs, const float* ys,
+static void _orbench_old_init(int N, const float* xs, const float* ys,
                    float eps, int minPts)
 {
     g_N = N;
@@ -162,12 +162,13 @@ static void clusterThread(int numPoints, point* point_Data,
     free(oneRow);
 }
 
-void solution_compute(int N, int* labels)
+static void _orbench_old_compute(int N, int* labels)
 {
     clusterThread(N, g_points, labels, g_eps, g_minPts);
 }
 
-void solution_free(void)
-{
-    if (g_points) { free(g_points); g_points = NULL; }
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int N, const float* xs, const float* ys, float eps, int minPts, int* labels) {
+    _orbench_old_init(N, xs, ys, eps, minPts);
+    _orbench_old_compute(N, labels);
 }

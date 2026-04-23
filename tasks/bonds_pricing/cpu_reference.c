@@ -1193,7 +1193,7 @@ void getBondsResultsCpu(inArgsStruct inArgs, resultsStruct results, int totNumRu
 
 // ===== Public interface (solution_init / solution_compute / solution_free) =====
 
-void solution_init(int N,
+static void _orbench_old_init(int N,
                    const int* issue_year, const int* issue_month, const int* issue_day,
                    const int* maturity_year, const int* maturity_month, const int* maturity_day,
                    const float* rates, float coupon_freq) {
@@ -1208,7 +1208,7 @@ void solution_init(int N,
     g_coupon_freq = coupon_freq;
 }
 
-void solution_compute(int N, float* prices) {
+static void _orbench_old_compute(int N, float* prices) {
     // Build inArgsStruct from flat arrays, matching bondsEngine.c setup
     inArgsStruct inArgsHost;
 
@@ -1303,6 +1303,8 @@ void solution_compute(int N, float* prices) {
     free(inArgsHost.dummyStrike);
 }
 
-void solution_free(void) {
-    /* No persistent allocations */
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int N, const int* issue_year, const int* issue_month, const int* issue_day, const int* maturity_year, const int* maturity_month, const int* maturity_day, const float* rates, float coupon_freq, float* prices) {
+    _orbench_old_init(N, issue_year, issue_month, issue_day, maturity_year, maturity_month, maturity_day, rates, coupon_freq);
+    _orbench_old_compute(N, prices);
 }

@@ -10,21 +10,18 @@ task_description: |
 
 interface: |
   ```c
-  // Called once before timing. Receive host-side data, do cudaMalloc / H2D etc.
-  extern "C" void solution_init(
-      int V, int E,
-      const int*   h_row_offsets,   // host, (V+1) ints, CSR row offsets
-      const int*   h_col_indices,   // host, E ints, CSR column indices
-      const float* h_weights        // host, E floats, edge weights (positive)
-  );
-
-  // Called multiple times (warmup + timed). MUST be idempotent.
-  // All parameters are host pointers.
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
   extern "C" void solution_compute(
+      int V,
+      int E,
+      const int* h_row_offsets,
+      const int* h_col_indices,
+      const float* h_weights,
       int num_requests,
-      const int*   h_sources,       // host, num_requests ints
-      const int*   h_targets,       // host, num_requests ints
-      float*       h_distances      // host, num_requests floats (output)
+      const int* h_sources,
+      const int* h_targets,
+      float* h_distances
   );
   ```
 
@@ -54,16 +51,15 @@ algorithm_background: |
 # ── Hints by level ──
 
 hints_l2: |
-  - Copy graph data to GPU **once** in `solution_init`; reuse across all `solution_compute` calls
+  - Copy graph data to GPU **once** inside `solution_compute`; keep state local to each call
   - Queries with the same `source` can share a single Bellman-Ford run (deduplicate sources)
   - Use early termination: stop iterating when no edge is relaxed in a round
   - Consider edge-parallel or vertex-parallel relaxation strategies
 
 hints_l1: |
   ### 1. Persistent GPU Graph Data
-  Copy `row_offsets`, `col_indices`, and `weights` to device memory in `solution_init`.
-  Also pre-allocate a `dist` buffer on the device. Reuse everything across all
-  `solution_compute` calls — no per-call allocation.
+  Copy `row_offsets`, `col_indices`, and `weights` to device memory inside `solution_compute`.
+  Also pre-allocate a `dist` buffer on the device. keep state local to each call — no per-call allocation.
 
   ### 2. Source Deduplication
   The 100 queries have only 10 distinct sources. Group queries by source and run

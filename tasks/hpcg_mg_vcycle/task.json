@@ -3,15 +3,47 @@
   "name": "HPCG Multigrid V-Cycle on a 27-Point Stencil Matrix",
   "category": "sparse_linear_algebra",
   "difficulty": 4,
-  "tags": ["hpcg", "multigrid", "v_cycle", "csr", "27_point_stencil", "symgs", "restriction", "prolongation"],
+  "tags": [
+    "hpcg",
+    "multigrid",
+    "v_cycle",
+    "csr",
+    "27_point_stencil",
+    "symgs",
+    "restriction",
+    "prolongation"
+  ],
   "input_sizes": {
-    "small":  {"nx": 32, "ny": 32, "nz": 32, "coarse_levels": 3},
-    "medium": {"nx": 56, "ny": 56, "nz": 56, "coarse_levels": 3},
-    "large":  {"nx": 72, "ny": 72, "nz": 72, "coarse_levels": 3}
+    "small": {
+      "nx": 32,
+      "ny": 32,
+      "nz": 32,
+      "coarse_levels": 3
+    },
+    "medium": {
+      "nx": 56,
+      "ny": 56,
+      "nz": 56,
+      "coarse_levels": 3
+    },
+    "large": {
+      "nx": 72,
+      "ny": 72,
+      "nz": 72,
+      "coarse_levels": 3
+    }
   },
-  "correctness": {"mode": "numeric", "atol": 1e-9, "rtol": 1e-9},
-  "timing": {"warmup": 1, "trials": 3, "timeout": 300},
-  "interface_mode": "init_compute",
+  "correctness": {
+    "mode": "numeric",
+    "atol": 1e-09,
+    "rtol": 1e-09
+  },
+  "interface_mode": "compute_only",
+  "timing": {
+    "warmup": 1,
+    "trials": 3,
+    "timeout": 300
+  },
   "build_command": "",
   "extra_build_flags": "",
   "gpu_optimization_points": [

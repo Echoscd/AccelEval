@@ -15,24 +15,20 @@ task_description: |
 
 interface: |
   ```c
-  extern "C" void solution_init(
-      int N,
-      const int* issue_year,      // host, [N]
-      const int* issue_month,     // host, [N]
-      const int* issue_day,       // host, [N]
-      const int* maturity_year,   // host, [N]
-      const int* maturity_month,  // host, [N]
-      const int* maturity_day,    // host, [N]
-      const float* rates,         // host, [N], coupon rates
-      float coupon_freq           // semiannual = 2.0
-  );
-
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
   extern "C" void solution_compute(
-      int N,                       // number of bonds
-      float* prices                // host, [N*4], output: dirty, accrued, clean, yield per bond
+      int N,
+      const int* issue_year,
+      const int* issue_month,
+      const int* issue_day,
+      const int* maturity_year,
+      const int* maturity_month,
+      const int* maturity_day,
+      const float* rates,
+      float coupon_freq,
+      float* prices
   );
-
-  extern "C" void solution_free(void);
   ```
 
 input_size_notes: |
@@ -90,14 +86,14 @@ algorithm_background: |
   Bonds are completely independent -- embarrassingly parallel.
 
 hints_l2: |
-  - Copy all bond data arrays to GPU at the start of `solution_init`
+  - Copy all bond data arrays to GPU at the start of `solution_compute` setup phase
   - Launch one thread per bond, each independently computing yield + prices
   - Use `float` or `double` math as needed for solver convergence
   - All per-bond cash flow arrays can be allocated in registers/local memory (small M)
 
 hints_l1: |
   ### 1. Persistent GPU Data
-  In `solution_init`, copy `issue_year/month/day`, `maturity_year/month/day`, `rates` to device.
+  In `solution_compute` setup phase, copy `issue_year/month/day`, `maturity_year/month/day`, `rates` to device.
   Pre-allocate `prices` output buffer on device (N*4 floats).
 
   ### 2. One Thread Per Bond

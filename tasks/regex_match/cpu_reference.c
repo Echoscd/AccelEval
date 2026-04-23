@@ -27,7 +27,7 @@ static const int* g_is_accept;       // [num_states]
 static const int* g_str_offsets;     // [num_strings + 1]
 static const int* g_str_data;        // [total_chars]
 
-void solution_init(int num_states, int num_symbols, int start_state,
+static void _orbench_old_init(int num_states, int num_symbols, int start_state,
                    int num_strings, int total_chars,
                    const int* trans_offsets, const int* trans_targets,
                    const int* eps_offsets, const int* eps_targets,
@@ -133,10 +133,16 @@ static int nfa_match_one(const int* str, int str_len) {
 }
 
 // ===== solution_compute: match all strings =====
-void solution_compute(int num_strings, int* results) {
+static void _orbench_old_compute(int num_strings, int* results) {
     for (int i = 0; i < num_strings; i++) {
         int offset = g_str_offsets[i];
         int len = g_str_offsets[i + 1] - offset;
         results[i] = nfa_match_one(&g_str_data[offset], len);
     }
+}
+
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int num_states, int num_symbols, int start_state, int num_strings, int total_chars, const int* trans_offsets, const int* trans_targets, const int* eps_offsets, const int* eps_targets, const int* is_accept, const int* str_offsets, const int* str_data, int* results) {
+    _orbench_old_init(num_states, num_symbols, start_state, num_strings, total_chars, trans_offsets, trans_targets, eps_offsets, eps_targets, is_accept, str_offsets, str_data);
+    _orbench_old_compute(num_strings, results);
 }

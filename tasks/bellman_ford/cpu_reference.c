@@ -22,7 +22,7 @@ static const int*   g_col_indices;
 static const float* g_weights;
 static float*       g_dist_buf;   // working buffer, size V
 
-void solution_init(int V, int E,
+static void _orbench_old_init(int V, int E,
                    const int* h_row_offsets,
                    const int* h_col_indices,
                    const float* h_weights) {
@@ -34,7 +34,7 @@ void solution_init(int V, int E,
     g_dist_buf    = (float*)malloc((size_t)V * sizeof(float));
 }
 
-void solution_compute(int num_requests,
+static void _orbench_old_compute(int num_requests,
                       const int* sources,
                       const int* targets,
                       float* distances) {
@@ -68,3 +68,8 @@ void solution_compute(int num_requests,
     }
 }
 
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int V, int E, const int* h_row_offsets, const int* h_col_indices, const float* h_weights, int num_requests, const int* h_sources, const int* h_targets, float* h_distances) {
+    _orbench_old_init(V, E, h_row_offsets, h_col_indices, h_weights);
+    _orbench_old_compute(num_requests, h_sources, h_targets, h_distances);
+}

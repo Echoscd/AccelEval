@@ -39,7 +39,6 @@ interface: |
       float* V_out         // HOST, [S], output: ν(α,β) for all states
   );
 
-  extern "C" void solution_free(void);
   ```
 
 input_size_notes: |

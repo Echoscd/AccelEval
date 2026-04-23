@@ -13,24 +13,18 @@ task_description: |
 
 interface: |
   ```c
-  // Called once to receive option parameters (host pointers).
-  // Store pointers for use in solution_compute.
-  extern "C" void solution_init(
-      int N,                    // number of options
-      const int*   types,       // HOST [N]: 0=CALL, 1=PUT
-      const float* strikes,     // HOST [N]: strike price K
-      const float* spots,       // HOST [N]: spot price S
-      const float* qs,          // HOST [N]: dividend yield q
-      const float* rs,          // HOST [N]: risk-free rate r
-      const float* ts,          // HOST [N]: time to maturity (years)
-      const float* vols         // HOST [N]: volatility sigma
-  );
-
-  // Called multiple times (must be idempotent and synchronize before returning).
-  // Compute Black-Scholes price for each of the N options.
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
   extern "C" void solution_compute(
-      int N,                    // number of options
-      float* prices             // HOST [N]: output option prices
+      int N,
+      const int* types,
+      const float* strikes,
+      const float* spots,
+      const float* qs,
+      const float* rs,
+      const float* ts,
+      const float* vols,
+      float* prices
   );
   ```
 
@@ -109,13 +103,13 @@ hints_l2: |
   - Each option is independent -- one thread per option, trivially parallel
   - Use fast math intrinsics on GPU: `__expf()`, `__logf()`, `rsqrtf()`
   - All input arrays are contiguous float32 -- coalesced memory access is natural
-  - Pre-upload all parameter arrays to GPU in `solution_init`, reuse across calls
+  - Pre-upload all parameter arrays to GPU inside `solution_compute`, reuse across calls
   - The error function is pure arithmetic with no memory access -- compute-bound
   - Consider using shared memory to cache frequently-used constants
 
 hints_l1: |
   ### 1. Data Transfer Strategy
-  In `solution_init`:
+  In `solution_compute` setup phase:
   - Allocate device buffers for all 7 input arrays + 1 output array
   - `cudaMemcpy` all inputs to device (done once)
   - Allocate `d_prices` on device (reused across `solution_compute` calls)

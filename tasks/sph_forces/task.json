@@ -10,7 +10,7 @@
     "wendland_kernel",
     "navier_stokes"
   ],
-  "interface_mode": "init_compute",
+  "interface_mode": "compute_only",
   "input_sizes": {
     "small": {
       "N": 10000,

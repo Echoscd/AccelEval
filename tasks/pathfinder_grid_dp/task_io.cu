@@ -1,54 +1,46 @@
-// task_io.cu -- pathfinder_grid_dp GPU I/O adapter
+// task_io.cu — unified compute_only interface (auto-migrated)
 
 #include "orbench_io.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <cuda_runtime.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-extern void solution_init(int rows, int cols, const int* wall);
-extern void solution_compute(int* out_costs);
-extern void solution_free(void);
-
-#ifdef __cplusplus
-}
-#endif
+extern "C" void solution_compute(int rows,
+                             int cols,
+                             const int* wall,
+                             int* out_costs);
 
 typedef struct {
+    int rows;
     int cols;
+    const int* wall;
     int* out_costs;
 } TaskIOContext;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void* task_setup(const TaskData* data, const char* data_dir) {
+extern "C" void* task_setup(const TaskData* data, const char* data_dir) {
     (void)data_dir;
-    int rows = (int)get_param(data, "rows");
-    int cols = (int)get_param(data, "cols");
-    const int* wall = get_tensor_int(data, "wall");
-    if (!wall) {
-        fprintf(stderr, "[task_io] Missing tensor 'wall'\n");
+    TaskIOContext* ctx = (TaskIOContext*)calloc(1, sizeof(TaskIOContext));
+    if (!ctx) return NULL;
+    ctx->rows = (int)get_param(data, "rows");
+    ctx->cols = (int)get_param(data, "cols");
+    ctx->wall = get_tensor_int(data, "wall");
+
+    if (!ctx->wall) {
+        fprintf(stderr, "[task_io] Missing tensor data\n");
+        free(ctx);
         return NULL;
     }
-
-    solution_init(rows, cols, wall);
-
-    TaskIOContext* ctx = (TaskIOContext*)calloc(1, sizeof(TaskIOContext));
-    ctx->cols = cols;
-    ctx->out_costs = (int*)calloc((size_t)cols, sizeof(int));
+    ctx->out_costs = (int*)calloc((size_t)(ctx->cols), sizeof(int));
     return ctx;
 }
 
-void task_run(void* test_data) {
+extern "C" void task_run(void* test_data) {
     TaskIOContext* ctx = (TaskIOContext*)test_data;
-    solution_compute(ctx->out_costs);
+    solution_compute(ctx->rows, ctx->cols, ctx->wall, ctx->out_costs);
 }
 
-void task_write_output(void* test_data, const char* output_path) {
+extern "C" void task_write_output(void* test_data, const char* output_path) {
     TaskIOContext* ctx = (TaskIOContext*)test_data;
     FILE* f = fopen(output_path, "w");
     if (!f) return;
@@ -58,14 +50,9 @@ void task_write_output(void* test_data, const char* output_path) {
     fclose(f);
 }
 
-void task_cleanup(void* test_data) {
+extern "C" void task_cleanup(void* test_data) {
     if (!test_data) return;
     TaskIOContext* ctx = (TaskIOContext*)test_data;
-    solution_free();
     free(ctx->out_costs);
     free(ctx);
 }
-
-#ifdef __cplusplus
-}
-#endif

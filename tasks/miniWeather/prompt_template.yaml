@@ -34,7 +34,6 @@ interface: |
   );
 
   // Optional: release GPU resources.
-  extern "C" void solution_free(void);
   ```
 
   **L2 norm computation** (after the simulation ends):

@@ -36,7 +36,6 @@ interface: |
       int* counts                 // host, [N], output: collision count per polygon
   );
 
-  extern "C" void solution_free(void);
   ```
 
 input_size_notes: |

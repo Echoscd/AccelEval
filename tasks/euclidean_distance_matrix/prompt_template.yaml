@@ -16,26 +16,14 @@ task_description: |
 
 interface: |
   ```c
-  // Called once: store host pointers to column-major points.
-  // ref:   [dim, ref_nb]   column-major (point-major) float32
-  //        ref[k * ref_nb + r] = k-th coordinate of ref point r
-  // query: [dim, query_nb] column-major float32
-  //        query[k * query_nb + q] = k-th coordinate of query point q
-  extern "C" void solution_init(
-      int          ref_nb,
-      int          query_nb,
-      int          dim,
-      const float* ref,
-      const float* query
-  );
-
-  // Called multiple times. Must synchronize before returning.
-  // dist: [ref_nb, query_nb] row-major float32 (squared L2 distances)
-  //       dist[r * query_nb + q] = ||ref[r] - query[q]||^2
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
   extern "C" void solution_compute(
-      int    ref_nb,
-      int    query_nb,
-      int    dim,
+      int ref_nb,
+      int query_nb,
+      int dim,
+      const float* ref,
+      const float* query,
       float* dist
   );
   ```
@@ -74,12 +62,12 @@ hints_l2: |
   - Tile both the (query, ref) output plane and the `dim` reduction axis.
   - 16x16 or 32x32 thread blocks work well; load tiles into shared memory
     cooperatively, then accumulate squared differences in registers.
-  - Pre-upload `ref` and `query` to device memory once in `solution_init`.
+  - Pre-upload `ref` and `query` to device memory once inside `solution_compute`.
 
 hints_l1: |
   ### 1. Data Transfer
-  - In `solution_init`: `cudaMalloc` and `cudaMemcpy` ref, query (host -> device).
-  - Allocate output `d_dist` once, reuse across `solution_compute` calls.
+  - In `solution_compute` setup phase: `cudaMalloc` and `cudaMemcpy` ref, query (host -> device).
+  - Allocate output `d_dist` once, keep state local to each call.
   - In `solution_compute`: launch kernel, then copy `d_dist` -> host `dist`.
 
   ### 2. Tiled Kernel Skeleton

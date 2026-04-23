@@ -18,20 +18,22 @@ task_description: |
   The maximum transit time for any edge is 31, so you can use a circular buffer of size 32 for the transit pipeline of each edge.
 
 interface: |
-  extern "C" void solution_init(
+  ```c
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
+  extern "C" void solution_compute(
       int num_nodes,
       int num_edges,
       int num_steps,
       const int* edge_u,
       const int* edge_v,
       const float* edge_capacity,
-      const int* edge_transit_time
+      const int* edge_transit_time,
+      int num_requests,                  // number of inflow-rate scenarios
+      const float* inflow_rates,         // HOST [num_requests]
+      float* results                     // HOST [num_requests] output
   );
-
-  extern "C" void solution_compute(float inflow_rate, float* out_total_arrived);
-
-  You MUST implement both `solution_init` and `solution_compute`.
-  (`solution_free` is optional — the framework provides a no-op default.)
+  ```
 
 input_size_notes: |
   - `num_nodes` is up to 5,000.
@@ -40,7 +42,7 @@ input_size_notes: |
   - `edge_transit_time` is between 1 and 31.
 
 output_contract: |
-  - `solution_init` should allocate any necessary GPU memory and copy the graph structure.
+  - `solution_compute` setup phase should allocate any necessary GPU memory and copy the graph structure.
   - `solution_compute` must perform the simulation and write the final `total_arrived` to `out_total_arrived`.
   - `solution_compute` must be idempotent and reset all simulation state (queues, pipelines, node flows) to zero at the beginning of each call.
   - The Bellman-Ford routing must exactly match the integer arithmetic and tie-breaking logic of the reference implementation to ensure deterministic results.
@@ -56,7 +58,7 @@ hints_l2: |
   - To handle the tie-breaking deterministically in parallel, you can pack the distance and edge index into a single 64-bit integer (`(uint64_t)dist << 32 | (uint32_t)edge_index`) and use `atomicMin` on `unsigned long long`. This perfectly matches the CPU's sequential tie-breaking logic.
 
 hints_l1: |
-  - In `solution_init`, allocate device arrays for the graph structure, node flows, edge queues, pipelines, distances, and next edges.
+  - In `solution_compute` setup phase, allocate device arrays for the graph structure, node flows, edge queues, pipelines, distances, and next edges.
   - In `solution_compute`, launch a kernel to clear the state arrays (node flows, queues, pipelines).
   - Implement the 5 phases as separate CUDA kernels launched sequentially in a loop for `num_steps`.
   - For Bellman-Ford, initialize distances to 1,000,000,000 and the destination to 0. Launch a kernel over edges that reads `dist[v]`, computes `new_dist`, and uses `atomicMin` on a 64-bit packed value at `dist_packed[u]` to update both distance and `next_edge`.

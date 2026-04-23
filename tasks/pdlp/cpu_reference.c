@@ -165,7 +165,7 @@ static void pdhg_step(int   num_vars,
 
 // ===== Public interface =====
 
-void solution_init(int          num_vars,
+static void _orbench_old_init(int          num_vars,
                    int          num_constraints,
                    int          nnz,
                    int          num_iters,
@@ -203,7 +203,7 @@ void solution_init(int          num_vars,
     g_avg_weight_sum = 0.0f;
 }
 
-void solution_compute(int num_vars, int num_constraints, float* primal_out)
+static void _orbench_old_compute(int num_vars, int num_constraints, float* primal_out)
 {
     // Scratch buffers for one step
     float* tmp_x_bar = (float*)malloc(g_num_vars * sizeof(float));
@@ -236,10 +236,8 @@ void solution_compute(int num_vars, int num_constraints, float* primal_out)
     free(tmp_temp);
 }
 
-void solution_free(void)
-{
-    free(g_primal);       g_primal = NULL;
-    free(g_dual);         g_dual = NULL;
-    free(g_dual_product); g_dual_product = NULL;
-    free(g_primal_avg);   g_primal_avg = NULL;
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int num_vars, int num_constraints, int nnz, int num_iters, const float* obj, const float* var_lb, const float* var_ub, const float* con_lb, const float* con_ub, const int* col_ptrs, const int* row_indices, const float* values, float step_size, float primal_weight, float* primal_out) {
+    _orbench_old_init(num_vars, num_constraints, nnz, num_iters, obj, var_lb, var_ub, con_lb, con_ub, col_ptrs, row_indices, values, step_size, primal_weight);
+    _orbench_old_compute(num_vars, num_constraints, primal_out);
 }

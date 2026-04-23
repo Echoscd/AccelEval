@@ -1,4 +1,4 @@
-// task_io.cu -- bonds_pricing GPU I/O adapter
+// task_io.cu — unified compute_only interface (auto-migrated)
 
 #include "orbench_io.h"
 #include <stdio.h>
@@ -6,27 +6,19 @@
 #include <string.h>
 #include <cuda_runtime.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-extern void solution_init(int N,
-                          const int* issue_year, const int* issue_month, const int* issue_day,
-                          const int* maturity_year, const int* maturity_month, const int* maturity_day,
-                          const float* rates, float coupon_freq);
-
-extern void solution_compute(int N, float* prices);
-extern void solution_free(void);
-// Weak default: LLM does not need to implement solution_free
-extern "C" __attribute__((weak)) void solution_free(void) { }
-
-#ifdef __cplusplus
-}
-#endif
+extern "C" void solution_compute(int N,
+                             const int* issue_year,
+                             const int* issue_month,
+                             const int* issue_day,
+                             const int* maturity_year,
+                             const int* maturity_month,
+                             const int* maturity_day,
+                             const float* rates,
+                             float coupon_freq,
+                             float* prices);
 
 typedef struct {
     int N;
-    float coupon_freq;
     const int* issue_year;
     const int* issue_month;
     const int* issue_day;
@@ -34,56 +26,40 @@ typedef struct {
     const int* maturity_month;
     const int* maturity_day;
     const float* rates;
+    float coupon_freq;
     float* prices;
 } TaskIOContext;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void* task_setup(const TaskData* data, const char* data_dir) {
-    int N = (int)get_param(data, "N");
+extern "C" void* task_setup(const TaskData* data, const char* data_dir) {
+    (void)data_dir;
+    TaskIOContext* ctx = (TaskIOContext*)calloc(1, sizeof(TaskIOContext));
+    if (!ctx) return NULL;
     int coupon_freq_x100 = (int)get_param(data, "coupon_freq_x100");
-    float coupon_freq = (float)coupon_freq_x100 / 100.0f;
+    ctx->N = (int)get_param(data, "N");
+    ctx->issue_year = get_tensor_int(data, "issue_year");
+    ctx->issue_month = get_tensor_int(data, "issue_month");
+    ctx->issue_day = get_tensor_int(data, "issue_day");
+    ctx->maturity_year = get_tensor_int(data, "maturity_year");
+    ctx->maturity_month = get_tensor_int(data, "maturity_month");
+    ctx->maturity_day = get_tensor_int(data, "maturity_day");
+    ctx->rates = get_tensor_float(data, "rates");
+    ctx->coupon_freq = (float)coupon_freq_x100 / 100.0f;
 
-    const int* issue_year     = get_tensor_int(data, "issue_year");
-    const int* issue_month    = get_tensor_int(data, "issue_month");
-    const int* issue_day      = get_tensor_int(data, "issue_day");
-    const int* maturity_year  = get_tensor_int(data, "maturity_year");
-    const int* maturity_month = get_tensor_int(data, "maturity_month");
-    const int* maturity_day   = get_tensor_int(data, "maturity_day");
-    const float* rates        = get_tensor_float(data, "rates");
-
-    if (!issue_year || !issue_month || !issue_day ||
-        !maturity_year || !maturity_month || !maturity_day || !rates) {
+    if (!ctx->issue_year || !ctx->issue_month || !ctx->issue_day || !ctx->maturity_year || !ctx->maturity_month || !ctx->maturity_day || !ctx->rates) {
         fprintf(stderr, "[task_io] Missing tensor data\n");
+        free(ctx);
         return NULL;
     }
-
-    TaskIOContext* ctx = (TaskIOContext*)calloc(1, sizeof(TaskIOContext));
-    ctx->N = N;
-    ctx->coupon_freq = coupon_freq;
-    ctx->issue_year = issue_year;
-    ctx->issue_month = issue_month;
-    ctx->issue_day = issue_day;
-    ctx->maturity_year = maturity_year;
-    ctx->maturity_month = maturity_month;
-    ctx->maturity_day = maturity_day;
-    ctx->rates = rates;
-    ctx->prices = (float*)calloc((size_t)N * 4, sizeof(float));
-
-    solution_init(N, issue_year, issue_month, issue_day,
-                  maturity_year, maturity_month, maturity_day,
-                  rates, coupon_freq);
+    ctx->prices = (float*)calloc((size_t)(ctx->N * 4), sizeof(float));
     return ctx;
 }
 
-void task_run(void* test_data) {
+extern "C" void task_run(void* test_data) {
     TaskIOContext* ctx = (TaskIOContext*)test_data;
-    solution_compute(ctx->N, ctx->prices);
+    solution_compute(ctx->N, ctx->issue_year, ctx->issue_month, ctx->issue_day, ctx->maturity_year, ctx->maturity_month, ctx->maturity_day, ctx->rates, ctx->coupon_freq, ctx->prices);
 }
 
-void task_write_output(void* test_data, const char* output_path) {
+extern "C" void task_write_output(void* test_data, const char* output_path) {
     TaskIOContext* ctx = (TaskIOContext*)test_data;
     FILE* f = fopen(output_path, "w");
     if (!f) return;
@@ -94,14 +70,9 @@ void task_write_output(void* test_data, const char* output_path) {
     fclose(f);
 }
 
-void task_cleanup(void* test_data) {
+extern "C" void task_cleanup(void* test_data) {
     if (!test_data) return;
     TaskIOContext* ctx = (TaskIOContext*)test_data;
-    solution_free();
     free(ctx->prices);
     free(ctx);
 }
-
-#ifdef __cplusplus
-}
-#endif

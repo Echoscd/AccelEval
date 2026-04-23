@@ -3,15 +3,42 @@
   "name": "HPCG Symmetric Gauss-Seidel Sweep on a 27-Point Stencil Matrix",
   "category": "sparse_linear_algebra",
   "difficulty": 3,
-  "tags": ["hpcg", "symgs", "gauss_seidel", "csr", "27_point_stencil", "sparse_solver"],
+  "tags": [
+    "hpcg",
+    "symgs",
+    "gauss_seidel",
+    "csr",
+    "27_point_stencil",
+    "sparse_solver"
+  ],
   "input_sizes": {
-    "small":  {"nx": 32, "ny": 32, "nz": 32},
-    "medium": {"nx": 56, "ny": 56, "nz": 56},
-    "large":  {"nx": 72, "ny": 72, "nz": 72}
+    "small": {
+      "nx": 32,
+      "ny": 32,
+      "nz": 32
+    },
+    "medium": {
+      "nx": 56,
+      "ny": 56,
+      "nz": 56
+    },
+    "large": {
+      "nx": 72,
+      "ny": 72,
+      "nz": 72
+    }
   },
-  "correctness": {"mode": "numeric", "atol": 1e-9, "rtol": 1e-9},
-  "timing": {"warmup": 1, "trials": 3, "timeout": 240},
-  "interface_mode": "init_compute",
+  "correctness": {
+    "mode": "numeric",
+    "atol": 1e-09,
+    "rtol": 1e-09
+  },
+  "interface_mode": "compute_only",
+  "timing": {
+    "warmup": 1,
+    "trials": 3,
+    "timeout": 240
+  },
   "build_command": "",
   "extra_build_flags": "",
   "gpu_optimization_points": [

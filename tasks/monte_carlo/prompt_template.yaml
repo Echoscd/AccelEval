@@ -13,28 +13,20 @@ task_description: |
 
 interface: |
   ```c
-  // Called once to receive simulation parameters.
-  extern "C" void solution_init(
-      int N,                    // number of paths to simulate
-      int num_steps,            // number of time steps per path (e.g. 252)
-      float risk_free,          // risk-free interest rate
-      float volatility,         // volatility (sigma)
-      float strike,             // strike price K
-      float spot,               // initial spot price S0
-      float time_to_maturity,   // time to maturity in years
-      unsigned int base_seed    // base seed for RNG
-  );
-
-  // Called multiple times (must be idempotent and synchronize before returning).
-  // Compute discounted put payoff for each of the N paths.
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
   extern "C" void solution_compute(
-      int N,                    // number of paths
-      float* payoffs            // HOST [N]: output discounted payoffs
+      int N,
+      int num_steps,
+      float risk_free,
+      float volatility,
+      float strike,
+      float spot,
+      float time_to_maturity,
+      unsigned int base_seed,
+      float* payoffs
   );
   ```
-
-  You MUST implement both `solution_init` and `solution_compute`.
-  (`solution_free` is optional — the framework provides a no-op default.)
 
 input_size_notes: |
   | Size   | N (paths)    |
@@ -94,12 +86,12 @@ hints_l2: |
   - Use device-side RNG (xorshift32 is simple and fast on GPU)
   - Use fast math intrinsics: `__expf()`, `__logf()`, `rsqrtf()`
   - No input arrays to upload -- just scalar parameters
-  - Pre-allocate output buffer on device in `solution_init`
+  - Pre-allocate output buffer on device inside `solution_compute`
   - The main loop (252 steps) is compute-bound with no memory access
 
 hints_l1: |
   ### 1. Data Transfer Strategy
-  In `solution_init`:
+  In `solution_compute` setup phase:
   - Store all scalar parameters
   - Allocate device buffer `d_payoffs` of size N
 

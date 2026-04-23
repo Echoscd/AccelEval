@@ -19,17 +19,14 @@ task_description: |
 
 interface: |
   ```c
-  extern "C" void solution_init(
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
+  extern "C" void solution_compute(
       int rows,
       int cols,
-      const int* wall   // host, row-major, length rows*cols
+      const int* wall,
+      int* out_costs
   );
-
-  extern "C" void solution_compute(
-      int* out_costs    // host, length cols
-  );
-
-  extern "C" void solution_free(void);
   ```
 
 input_size_notes: |
@@ -62,14 +59,14 @@ algorithm_background: |
   Then swap `prev` and `next`.
 
 hints_l2: |
-  - Keep `wall` on GPU persistently after `solution_init`.
+  - Keep `wall` on GPU persistently after `solution_compute` setup phase.
   - Use two device buffers for previous/current row costs.
   - Launch one row-update kernel per row, with one thread per column.
   - Copy only the final row back to host at the end.
 
 hints_l1: |
   ### 1. Persistent device state
-  In `solution_init`, allocate device memory for `wall`, `prev`, and `next`, and copy `wall` to device once.
+  In `solution_compute` setup phase, allocate device memory for `wall`, `prev`, and `next`, and copy `wall` to device once.
 
   ### 2. Initialization
   Initialize `prev[c] = wall[c]` from the first row.

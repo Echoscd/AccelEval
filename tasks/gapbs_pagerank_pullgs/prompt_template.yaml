@@ -20,3 +20,17 @@ notes:
   - The update order is pull-direction with new values immediately visible,
     matching the Gauss-Seidel style used in GAPBS PageRank.
   - Output must match the CPU reference within the configured numeric tolerance.
+
+interface: |
+  ```c
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
+  extern "C" void solution_compute(
+      int n,
+      int max_iters,
+      const int * in_row_ptr,
+      const int * in_col_idx,
+      const int * out_degree,
+      float * scores_out
+  );
+  ```

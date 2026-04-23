@@ -24,8 +24,8 @@
       "seed": 42
     },
     "large": {
-      "N": 300000,
-      "eps_x10000": 50,
+      "N": 50000,
+      "eps_x10000": 80,
       "minPts": 8,
       "seed": 42
     }
@@ -33,6 +33,7 @@
   "correctness": {
     "mode": "exact"
   },
+  "interface_mode": "compute_only",
   "timing": {
     "warmup": 3,
     "trials": 10,

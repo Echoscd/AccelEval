@@ -31,7 +31,6 @@ interface: |
   );
 
   // Optional: release GPU resources (called after timing).
-  extern "C" void solution_free(void);
   ```
 
 input_size_notes: |

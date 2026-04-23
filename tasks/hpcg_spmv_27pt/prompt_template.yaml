@@ -16,3 +16,17 @@ notes:
   - The matrix originates from the HPCG 27-point stencil generator.
   - Use CSR semantics as provided; do not assume a dense matrix.
   - Output must match the CPU reference within the configured numeric tolerance.
+
+interface: |
+  ```c
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
+  extern "C" void solution_compute(
+      int n,
+      const int * row_ptr,
+      const int * col_idx,
+      const double * values,
+      const double * x,
+      double * y_out
+  );
+  ```

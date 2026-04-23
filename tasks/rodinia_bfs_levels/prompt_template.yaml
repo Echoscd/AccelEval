@@ -8,20 +8,17 @@ task_description: |
 
 interface: |
   ```c
-  extern "C" void solution_init(
+  // Single end-to-end call. Do H2D + kernel + D2H and synchronize before returning.
+  // Called multiple times (warmup + timed); must be idempotent.
+  extern "C" void solution_compute(
       int num_nodes,
       int num_edges,
       int source,
       const int* node_start,
       const int* node_degree,
-      const int* edge_dst
+      const int* edge_dst,
+      int* out_dist
   );
-
-  extern "C" void solution_compute(
-      int* out_dist   // host, length num_nodes
-  );
-
-  extern "C" void solution_free(void);
   ```
 
 input_size_notes: |
@@ -44,7 +41,7 @@ algorithm_background: |
   until no new node is discovered.
 
 hints_l2: |
-  - Keep graph arrays on device after `solution_init`.
+  - Keep graph arrays on device after `solution_compute` setup phase.
   - Parallelize over frontier nodes or over all nodes with a frontier mask.
   - Use a compact frontier queue or bitmap to reduce wasted work.
   - Reduce host-device synchronization inside the BFS loop.
@@ -52,7 +49,7 @@ hints_l2: |
 hints_l1: |
   ### 1. Persistent device allocations
   Allocate device copies of `node_start`, `node_degree`, `edge_dst`, frontier arrays, visited arrays,
-  and distance output in `solution_init`.
+  and distance output inside `solution_compute`.
 
   ### 2. Frontier expansion
   The Rodinia version scans all nodes and expands only active ones. A compact frontier queue may be faster.

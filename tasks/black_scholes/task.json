@@ -8,7 +8,7 @@
     "embarrassingly_parallel",
     "transcendental_math"
   ],
-  "interface_mode": "init_compute",
+  "interface_mode": "compute_only",
   "input_sizes": {
     "small": {
       "N": 100000,

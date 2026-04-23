@@ -97,7 +97,7 @@ static void kernel_hausdorffCpu(int             num_points,
 
 // ===== Public interface =====
 
-void solution_init(int           num_points,
+static void _orbench_old_init(int           num_points,
                    int           num_spaces,
                    const float*  points_xy,      // [num_points * 2], x0,y0,x1,y1,...
                    const int*    space_offsets)
@@ -108,7 +108,7 @@ void solution_init(int           num_points,
     g_space_offsets = space_offsets;
 }
 
-void solution_compute(int    num_points,
+static void _orbench_old_compute(int    num_points,
                       int    num_spaces,
                       float* results)              // [num_spaces * num_spaces]
 {
@@ -116,7 +116,8 @@ void solution_compute(int    num_points,
                         g_space_offsets, results);
 }
 
-void solution_free(void)
-{
-    /* All input data owned by task_io; nothing to free here. */
+// ── Unified compute_only wrapper (auto-migrated) ──
+void solution_compute(int num_points, int num_spaces, const float* points_xy, const int* space_offsets, float* results) {
+    _orbench_old_init(num_points, num_spaces, points_xy, space_offsets);
+    _orbench_old_compute(num_points, num_spaces, results);
 }
