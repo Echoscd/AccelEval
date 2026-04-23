@@ -45,6 +45,22 @@ PROBLEM_SOURCES = {
     "spmv_csr":                  "Google OR-Tools PDLP sharder.cc TransposedMatrixVectorProduct. CSR row-gather equivalent of CSC column-gather SpMV.",
     "held_karp_tsp":             "Held & Karp (1962). Google OR-Tools hamiltonian_path.h with LatticeMemoryManager and Gosper's hack.",
     "max_flow_push_relabel":     "Goldberg & Tarjan (1986). Google OR-Tools GenericMaxFlow (ortools/graph/generic_max_flow.h). Push-relabel with GlobalUpdate BFS.",
+    # ---- 22 new tasks from collaborator (from 5 benchmark suites) ----
+    "gapbs_cc_afforest":         "GAP Benchmark Suite (Beamer, Asanovic, Patterson, IISWC 2015). Connected components with Afforest sampling.",
+    "gapbs_pagerank_pullgs":     "GAP Benchmark Suite. PageRank pull-based Gauss-Seidel.",
+    "gapbs_triangle_orderedcount": "GAP Benchmark Suite. Triangle counting via ordered intersection.",
+    "hotspot_2d":                "Rodinia Benchmark Suite (Che et al., IISWC 2009). 2D thermal simulation stencil.",
+    "hpcg_mg_vcycle":            "HPCG Benchmark (Dongarra, Heroux, Luszczek). Multigrid V-cycle on 27-point stencil.",
+    "hpcg_spmv_27pt":            "HPCG Benchmark. 27-point stencil sparse matrix-vector multiply.",
+    "hpcg_symgs_sweep":          "HPCG Benchmark. Symmetric Gauss-Seidel smoother sweep.",
+    "npb_cg_sparse_solve":       "NAS Parallel Benchmarks (Bailey et al., 1991). Conjugate gradient sparse solve.",
+    "npb_lu_ssor_structured":    "NAS Parallel Benchmarks. LU with structured SSOR factorization.",
+    "npb_mg_vcycle":             "NAS Parallel Benchmarks. Structured multigrid V-cycle.",
+    "npb_sp_adi_pentadiagonal":  "NAS Parallel Benchmarks. SP pentadiagonal ADI sweep.",
+    "pathfinder_grid_dp":        "Rodinia Benchmark Suite. Grid-based shortest-path dynamic programming.",
+    "rodinia_bfs_levels":        "Rodinia Benchmark Suite. Frontier-based level-synchronous BFS.",
+    "rodinia_lud_blocked":       "Rodinia Benchmark Suite. Blocked LU decomposition.",
+    "rodinia_nw_alignment":      "Rodinia Benchmark Suite. Needleman-Wunsch DP sequence alignment.",
 }
 
 # ── Input/output type descriptions ────────────────────────────────────────
@@ -71,6 +87,22 @@ IO_TYPES = {
     "spmv_csr":                  {"input": "CSR sparse matrix (row_ptr, col_idx, vals) + dense x", "output": "dense y = A*x (float)"},
     "held_karp_tsp":             {"input": "B batches of n*n cost matrices (int)", "output": "TSP tour cost per batch (int)"},
     "max_flow_push_relabel":     {"input": "directed graph (tails, heads, caps) + source/sink", "output": "maximum flow value (int)"},
+    # ---- 22 new tasks ----
+    "gapbs_cc_afforest":         {"input": "CSR graph (row_ptr, col_idx)", "output": "component-label array (int)"},
+    "gapbs_pagerank_pullgs":     {"input": "CSR graph + damping params", "output": "PageRank values (float)"},
+    "gapbs_triangle_orderedcount": {"input": "CSR graph", "output": "triangle count (int64)"},
+    "hotspot_2d":                {"input": "2D temperature + power grids", "output": "updated temperature grid (float)"},
+    "hpcg_mg_vcycle":            {"input": "27-point stencil matrix (CSR) + RHS", "output": "approximate solution (float)"},
+    "hpcg_spmv_27pt":            {"input": "27-point stencil matrix + x vector", "output": "y = A*x (float)"},
+    "hpcg_symgs_sweep":          {"input": "27-point stencil matrix + RHS + x", "output": "updated x after SymGS sweep (float)"},
+    "npb_cg_sparse_solve":       {"input": "sparse matrix + RHS", "output": "CG solution vector (float)"},
+    "npb_lu_ssor_structured":    {"input": "3D structured grid state", "output": "updated grid after SSOR (float)"},
+    "npb_mg_vcycle":             {"input": "3D structured grid + RHS", "output": "multigrid-smoothed grid (float)"},
+    "npb_sp_adi_pentadiagonal":  {"input": "3D structured grid state", "output": "updated grid after ADI sweep (float)"},
+    "pathfinder_grid_dp":        {"input": "2D wall-cost grid", "output": "min cost per column (int)"},
+    "rodinia_bfs_levels":        {"input": "CSR graph + source", "output": "BFS level per node (int)"},
+    "rodinia_lud_blocked":       {"input": "dense n*n matrix", "output": "combined L/U factors (float)"},
+    "rodinia_nw_alignment":      {"input": "two sequences + penalty", "output": "DP alignment score (int)"},
 }
 
 
