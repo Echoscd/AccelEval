@@ -51,7 +51,6 @@ interface: |
       int* assignments              // host, N ints (output): pairing group ID for each leg
   );
 
-  extern "C" void solution_free(void);
   ```
 
 input_size_notes: |

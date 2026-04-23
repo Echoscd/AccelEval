@@ -8,6 +8,11 @@ tasks/**/data/
 runs/
 runs/**
 
+# 打包 / 虚拟环境 / IDE
+build/
+.venv/
+.vscode/
+
 # 编译产物
 cache/
 *.o
