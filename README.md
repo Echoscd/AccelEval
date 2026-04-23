@@ -1,184 +1,185 @@
-# ORBench
+# AccelEval (ORBench)
 
-**通用 CPU→CUDA 加速 Benchmark：评测大语言模型的 GPU 编程能力**
+**A benchmark for evaluating LLMs on CPU-to-CUDA code acceleration**
 
-ORBench 评测大语言模型能否将通用 CPU 代码自动改写为高效的 CUDA kernel。与现有 benchmark 不同——KernelBench 只关注 ML 算子，ComputeEval 只考察 CUDA 语法正确性——ORBench 覆盖经典算法，包括图遍历、动态规划、计算几何、组合优化等。
+AccelEval measures whether LLMs can translate sequential CPU programs into
+efficient CUDA kernels. Unlike prior benchmarks that focus on isolated GPU
+primitives (KernelBench) or pure syntax (ComputeEval), AccelEval stresses
+**end-to-end acceleration** across 43 production-style workloads — graph
+analytics, scientific computing, financial engineering, dynamic programming,
+spatial indexing, and more.
 
-## 当前任务
+- 📦 **Test data**: [Cosmoscd/AccelEval](https://huggingface.co/datasets/Cosmoscd/AccelEval) on HuggingFace
+- 📄 **Paper**: `docs/paper.tex` (arXiv) · `nips/neurips_2026.tex` (NeurIPS)
+- 🔬 **Tasks**: 43 tasks × 3 sizes (small/medium/large)
+- 🧪 **Interface**: single `solution_compute` that is **timed end-to-end**
 
-| Task ID | 领域 | 难度 | 并行维度 | 接口模式 | GPU 瓶颈 |
-|---------|------|------|----------|----------|----------|
-| bellman_ford | 图算法 | ★★ | V=500K 节点 | init_compute | 同步开销 |
-| collision_detection | 计算几何 | ★★★ | C=30M 对 | init_compute | 负载均衡 |
-| network_rm_dp | 运筹/动态定价 | ★★★★ | S=2.8M 状态 | compute_only | 状态空间大小 |
-| black_scholes | 金融计算 | ★ | N=10M 期权 | compute_only | 超越函数吞吐 |
-| bonds_pricing | 金融计算 | ★ | N=10M 债券 | compute_only | Newton-Raphson 迭代 |
-| monte_carlo | 金融计算 | ★★ | N=10M 路径 | compute_only | RNG + 路径模拟 |
-| repo_pricing | 金融计算 | ★★ | N=5M 回购 | compute_only | 设备端日期算术 |
-| euclidean_distance_matrix | 空间距离 | ★ | 2048×2048 | compute_only | 共享内存 tiling |
-| hausdorff_distance | 空间距离 | ★★ | 64 空间×256 点 | compute_only | atomicMax 归约 |
-| dtw_distance | 时序距离 | ★★★ | 4096 序列×1023 帧 | compute_only | 波前对角并行 |
-| dbscan | 空间聚类 | ★★★ | N=500K 点 | init_compute | 邻域搜索 + 簇扩展 |
-| nbnxm_forces | 分子动力学 | ★★★ | N=500K 原子 | compute_only | 力累加 atomic |
-| sph_position | 流体仿真 | ★ | N=5M 粒子 | compute_only | 内存带宽 |
-| sph_cell_index | 流体仿真 | ★★ | N=5M 粒子 | compute_only | 并行排序 + scan |
-| sph_forces | 流体仿真 | ★★★★ | N=500K 粒子 | compute_only | 邻居遍历 + 寄存器压力 |
+---
 
-## 快速开始
+## Quick start
 
 ```bash
-# 1. 安装依赖
+# 1. Install
 pip install -r requirements.txt
 
-# 2. 列出所有可用任务和模型
-python run.py list
+# 2. Download benchmark data (auto-fetches from HuggingFace)
+python3 scripts/download_data.py small      # smoke (≈50 MB)
+python3 scripts/download_data.py medium     # leaderboard (≈1.8 GB)
+python3 scripts/download_data.py large      # stress (≈2.5 GB)
 
-# 3. 生成测试数据
-python tasks/bellman_ford/gen_data.py small tasks/bellman_ford/data/small --with-expected
-python tasks/network_rm_dp/gen_data.py small tasks/network_rm_dp/data/small --with-expected
+# 3. Configure API keys
+cp .env.example .env    # edit with OPENROUTER_API_KEY / ANTHROPIC_API_KEY etc.
 
-# 4. 用 LLM 生成 CUDA 代码（需要 API key，run name 自动带日期）
-export LLM_API_KEY="your-api-key"
-python run.py generate --task bellman_ford --model claude-sonnet-4-20250514 --level 2 --samples 3
-
-# 5. 批量多模型生成
-python run.py generate-batch --models claude-sonnet-4 gpt-4o --tasks bellman_ford --levels 2 --samples 5
-
-# 6. 评测（需要 NVIDIA GPU）
-python run.py eval --run claude-sonnet-4_l2_20260319 --arch sm_89
-
-# 7. 多轮 Agent 实验（生成→评测→反馈→改进）
-python run.py agent-multiturn --model gemini-3.1-pro-preview --task network_rm_dp --level 2 --turns 10
-
-# 8. 查看结果
-python run.py analyze --run claude-sonnet-4_l2_20260319
-
-# 9. 跨模型对比
-python run.py compare --runs claude-sonnet-4_l2_20260319 gpt-4o_l2_20260319
+# 4. One-shot: generate + evaluate + analyze
+python3 -m framework.run_all_tasks \
+    --models gemini-3.1-pro-preview-openrouter \
+    --levels 3 --samples 1 --sizes small --yes
 ```
 
-## 项目结构
+Results land in `runs/<model>_l<level>_<timestamp>/` and a consolidated
+JSON in `runs/reports/all_results_<timestamp>.json`.
 
-```
-ORBench/
-├── run.py                      # 统一 CLI 入口
-├── models.yaml                 # LLM 提供商 & 模型配置
-├── config.yaml                 # 全局配置（GPU 架构、超时等）
-├── requirements.txt
-│
-├── framework/                  # 评测框架
-│   ├── task.py                 # 任务加载、TaskConfig（含 interface_mode）
-│   ├── generate.py             # 调 LLM API 生成 .cu 代码
-│   ├── generate_prompt.py      # 从 prompt_template.yaml 组装分级 prompt
-│   ├── compile.py              # nvcc 编译（自动传 -DORBENCH_COMPUTE_ONLY）
-│   ├── validate.py             # 正确性验证（对比 expected_output.txt）
-│   ├── benchmark.py            # CUDA Event 计时 + nsys 集成
-│   ├── profile.py              # nsys 自动化：profile → CSV → 分析
-│   ├── batch_eval.py           # 多 GPU 批量调度（spawn 进程隔离）
-│   ├── analyze.py              # 结果汇总
-│   ├── harness_common.h        # 通用 benchmark 骨架（支持双接口模式）
-│   ├── harness_gpu.cu          # GPU 计时封装（CUDA Event）
-│   ├── harness_cpu.c           # CPU 计时封装（clock_gettime）
-│   ├── orbench_io.h            # 二进制 input.bin 读取（C）
-│   ├── orbench_io_py.py        # 二进制 input.bin 写入（Python）
-│   ├── llm/
-│   │   ├── registry.py         # 多 LLM 提供商注册、客户端管理
-│   │   └── scheduler.py        # 批量生成调度（并发控制、断点续跑）
-│   └── agent/
-│       ├── multiturn.py        # 多轮 Agent 流水线
-│       ├── prompts.py          # 反馈 prompt 构建
-│       └── plot_metrics.py     # Agent 指标可视化（CSV + PNG）
-│
-├── tasks/                      # 任务定义
-│   └── <task_id>/
-│       ├── task.json           # 元信息（难度、规模、容差、interface_mode）
-│       ├── prompt_template.yaml# Prompt 模板（L1/L2/L3 分级 hints）
-│       ├── cpu_reference.c     # CPU 基准（纯计算，无 I/O）
-│       ├── task_io.cu          # GPU I/O 适配层（harness ↔ solution 桥接）
-│       ├── task_io_cpu.c       # CPU I/O 适配层
-│       ├── gen_data.py         # 数据生成 + CPU 求解 expected output
-│       └── data/{small,medium,large}/
-│           ├── input.bin               # 二进制输入（ORBench 格式）
-│           ├── requests.txt            # 请求描述
-│           ├── expected_output.txt     # CPU 参考答案
-│           ├── cpu_time_ms.txt         # CPU 基准耗时
-│           └── timing.json             # 最近一次运行的计时数据
-│
-├── runs/                       # 实验结果（自动带日期）
-│   └── <model>_l<level>_<date>/
-│       └── <task_id>/
-│           ├── sample_0.cu             # LLM 生成的代码
-│           └── ...
-│
-└── cache/                      # 编译缓存
+## Current leaderboard (L3, 44 tasks, **medium** size)
+
+| Rank | Model | Pass | Median Speedup | fast@10× |
+|:-:|---|---:|---:|---:|
+| 🥇 | **Gemini 3.1 Pro** | **94.9%** | **33×** | **64.1%** |
+| 🥈 | GLM 5.1 | 91.7% | 10× | 47.2% |
+| 🥉 | DeepSeek V3.2 | 89.7% | 7× | 27.6% |
+| 4 | Claude Opus 4.6 | 87.2% | 18× | 46.2% |
+| 5 | Kimi K2.5 | 84.8% | 14× | 45.5% |
+| 6 | Qwen 3.6 Plus | 84.2% | 17× | 47.4% |
+| 7 | GPT-5.4 | 73.5% | 19× | 44.1% |
+
+Regenerate with `python3 scripts/export_xlsx.py` after new runs.
+
+## Task categories
+
+| Category | Tasks |
+|----------|------|
+| Dynamic programming | `bellman_ford`, `held_karp_tsp`, `inventory_replenishment_dp`, `pathfinder_grid_dp`, `network_rm_dp`, `hawkes_dynamic_pricing_hjb`, `robust_value_iteration_hypercube`, `self_exciting_pricing_dp`, `gittins_index` |
+| Graph analytics | `gapbs_pagerank_pullgs`, `gapbs_triangle_orderedcount`, `gapbs_cc_afforest`, `rodinia_bfs_levels`, `max_flow_push_relabel` |
+| Sparse linear algebra | `hpcg_spmv_27pt`, `hpcg_symgs_sweep`, `hpcg_mg_vcycle`, `npb_cg_sparse_solve`, `spmv_csr` |
+| CFD / Stencil | `hotspot_2d`, `miniWeather`, `npb_lu_ssor_structured`, `npb_sp_adi_pentadiagonal` |
+| Financial computing | `black_scholes`, `bonds_pricing`, `monte_carlo`, `repo_pricing`, `batched_lhpca_portfolio` |
+| Fluid simulation | `sph_position`, `sph_cell_index`, `sph_forces` |
+| Distance / clustering | `euclidean_distance_matrix`, `hausdorff_distance`, `dtw_distance`, `dbscan` |
+| Optimization | `crew_pairing`, `pdlp`, `motzkin_straus_blp_eval` |
+| Stochastic / automata | `thompson_sampling`, `regex_match` |
+| Bioinformatics | `smith_waterman` |
+| Transportation | `nash_flows_over_time` |
+| Geometry | `collision_detection` |
+
+## Unified `compute_only` interface
+
+Every task exposes a **single** function:
+
+```c
+extern "C" void solution_compute(
+    /* inputs */ int N, const float* xs, const float* ys, float eps, int minPts,
+    /* output */ int* labels);
 ```
 
-## 三层架构
+The harness passes full host-side inputs every call; the LLM's code must
+do H2D copy + kernel launch + D2H copy and synchronize before returning.
+`solution_compute` is called with warmup + timed trials — it must be
+idempotent. The full wall time of each call is measured via CUDA Events,
+so there is no way to hide work in an untimed init phase.
 
-```
-harness (harness_common.h)      — 通用：计时、warmup、validate 控制
-  ↓
-task_io (task_io.cu)            — 任务特定：解析输入、格式化输出
-  ↓
-solution (LLM 生成)             — 纯计算：LLM 只写算法逻辑
-```
+## Prompt levels
 
-LLM 只需实现 `solution_init` + `solution_compute`（init_compute 模式）或 `solution_compute` + `solution_free`（compute_only 模式），无需处理文件 I/O、计时逻辑。
-
-## 双接口模式
-
-| 模式 | 适用场景 | 计时范围 | 防作弊 |
-|------|----------|----------|--------|
-| `init_compute` | 输入数据大（>1MB） | 只计时 compute | 允许 init 预处理 |
-| `compute_only` | 输入数据小（<1MB） | 计时 setup+compute | 防止把计算藏进 init |
-
-通过 `task.json` 的 `"interface_mode"` 字段控制，编译时自动传 `-DORBENCH_COMPUTE_ONLY` 宏。
-
-## Prompt 分级
-
-| Level | 包含内容 | 目标 |
+| Level | Includes | Purpose |
 |-------|----------|------|
-| L1 | 任务描述 + 接口 + 算法背景 + CPU 代码 + 详细 GPU 优化提示 | 测试代码实现能力 |
-| L2 | 任务描述 + 接口 + CPU 代码 + 简要提示 | 测试优化策略选择 |
-| L3 | 任务描述 + 接口 + CPU 代码 | 测试独立分析能力 |
+| L1 | Task + interface + CPU code + **full optimization guide** | Ceiling with scaffolding |
+| L2 | Task + interface + CPU code + brief hints | Optimization selection |
+| L3 | Task + interface + CPU code only | Autonomous capability |
 
-Prompt 由 `prompt_template.yaml` + `generate_prompt.py` 自动组装，CPU reference 代码自动注入。
+Prompts assemble from `tasks/<id>/prompt_template.yaml` via
+`framework/generate_prompt.py`.
 
-## 评测指标
-
-| 指标 | 说明 | 来源 |
-|------|------|------|
-| 编译通过率 | 生成代码能否 nvcc 编译 | nvcc |
-| 正确率 | 所有输入规模上结果正确 | 对比 expected_output.txt |
-| total_ms | init + solve 总耗时 | timing.json |
-| 端到端加速比 | CPU 时间 / GPU 端到端时间 | CUDA Event |
-| 纯 Kernel 加速比 | CPU 时间 / 纯 kernel 时间 | nsys trace |
-| GPU 利用率 | kernel 时间 / 端到端时间 | nsys trace |
-
-## 多轮 Agent 模式
+## Directory layout
 
 ```
-Turn 0: 基础 prompt → LLM 生成代码 → 编译 → 评测 → nsys profile
-Turn 1: 上轮代码 + 评测反馈 + nsys 分析 → LLM 改进 → 重新评测
-Turn N: 持续迭代优化
+AccelEval/
+├── run.py                  # Legacy CLI (single-model / single-task)
+├── framework/
+│   ├── run_all_tasks.py    # Recommended: generate → eval → analyze
+│   ├── compile.py          # nvcc compilation (auto-injects weak solution_free)
+│   ├── benchmark.py        # CUDA Event timing
+│   ├── validate.py         # Output comparison
+│   ├── generate_prompt.py  # L1/L2/L3 prompt assembly
+│   ├── llm/                # Multi-provider clients (OpenAI/Anthropic/OpenRouter/...)
+│   └── harness_{gpu,cpu}.{cu,c}   # Timing + validation skeleton
+├── tasks/
+│   └── <task>/
+│       ├── task.json               # Metadata: category, difficulty, sizes, tolerance
+│       ├── prompt_template.yaml    # Task description + interface + hints
+│       ├── cpu_reference.c         # CPU baseline
+│       ├── task_io.{cu,c}          # I/O adapter (framework-internal)
+│       ├── gen_data.py             # Generate input.bin + expected_output.txt
+│       └── data/{small,medium,large}/   # ← download via scripts/download_data.py
+├── scripts/
+│   ├── download_data.py            # Pull test data from HuggingFace
+│   ├── upload_to_hf.py             # Maintainer: push data to HF
+│   ├── migrate_to_compute_only.py  # One-off migration tool
+│   └── export_xlsx.py              # Build leaderboard xlsx from eval_results
+├── docs/                           # Paper drafts
+├── nips/                           # NeurIPS 2026 submission template
+└── runs/                           # Generated code + eval results (gitignored)
 ```
 
-每轮自动记录 `total_ms`、`kernel_time_ms`、`speedup_e2e` 等指标，生成 `agent_metrics.csv` 和 `agent_metrics.png` 趋势图。
+## Running specific workflows
 
-## 新增任务
+```bash
+# Eval existing generated .cu files (no API calls)
+python3 run.py eval --run <run_dir> --sizes medium
 
-1. 在 `tasks/` 下创建目录
-2. 编写 `task.json`（设置 `interface_mode`、难度、输入规模、容差）
-3. 编写 `prompt_template.yaml`（任务描述、接口、分级 hints）
-4. 编写 `cpu_reference.c`（纯计算，无文件 I/O）
-5. 编写 `task_io.cu` 和 `task_io_cpu.c`（I/O 适配层）
-6. 编写 `gen_data.py`（生成 input.bin + expected_output.txt）
-7. 运行 `gen_data.py` 生成 small/medium/large 数据
+# Cross-model comparison
+python3 run.py compare --runs gemini-*_l3_* claude-*_l3_*
 
-## 环境要求
+# Analyze one run
+python3 run.py analyze --run <run_dir>
+
+# Multi-turn agent loop (generate → eval → feedback → refine)
+python3 run.py agent-multiturn --model gemini-3.1-pro-preview \
+    --task network_rm_dp --level 2 --turns 10
+```
+
+## Adding a new task
+
+1. Create `tasks/<task_id>/`
+2. Write `task.json` — metadata including `"interface_mode": "compute_only"`
+3. Write `prompt_template.yaml` — description + single `solution_compute` signature + L1/L2 hints
+4. Write `cpu_reference.c` — pure computation, one `solution_compute(...)` function, no I/O
+5. Write `task_io.cu` and `task_io_cpu.c` — read input.bin into ctx, call `solution_compute`
+6. Write `gen_data.py` — generate input.bin + compute expected output via CPU baseline
+7. Run `python3 tasks/<task_id>/gen_data.py small tasks/<task_id>/data/small --with-expected`
+
+## Environment requirements
 
 - Python 3.10+
-- CUDA Toolkit 12.0+（nvcc）
-- NVIDIA GPU
-- nsys（推荐，用于 kernel 级分析）
-- `pip install -r requirements.txt`
+- CUDA Toolkit 12.0+ (`nvcc`)
+- NVIDIA GPU (sm_80 or newer recommended; default is `sm_89`)
+- `nsys` (optional — for kernel-level profiling)
+- `pip install huggingface_hub` for data download
+
+## Contributing
+
+Bug reports, new tasks, and new LLM integrations welcome. For large task
+additions, please include `gen_data.py` that produces deterministic output
+and keeps the medium size under 3 minutes of CPU baseline time.
+
+## Citation
+
+```bibtex
+@misc{acceleval2026,
+  title={AccelEval: A Benchmark for Evaluating LLMs on CPU-to-CUDA Code Acceleration},
+  author={Chen Dong},
+  year={2026},
+  url={https://github.com/Cosmoscd/AccelEval}
+}
+```
+
+## License
+
+Apache 2.0 — see [LICENSE](LICENSE).
