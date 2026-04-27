@@ -69,11 +69,15 @@ class GenerationScheduler:
     - Per-sample metadata JSON
     """
 
-    def __init__(self, registry: LLMRegistry, runs_dir: str):
+    def __init__(self, registry: LLMRegistry, runs_dir: str, guidance_dir: Optional[str] = None):
         self.registry = registry
         self.runs_dir = runs_dir
         self._split_kernels = False
         self._date_tag = datetime.now().strftime("%Y%m%d_%H%M")
+        # Strategy-transfer pipeline: per-task guidance files at
+        # {guidance_dir}/{task_id}.md; when set, prompts include the recipe
+        # and run names get an "_s2" tag so stage-1 runs are not overwritten.
+        self.guidance_dir: Optional[str] = guidance_dir
 
         # One rate limiter per provider (shared across models of same provider)
         self._limiters: dict[str, RateLimiter] = {}
@@ -102,7 +106,17 @@ class GenerationScheduler:
     # ── Path helpers ─────────────────────────────────────────
 
     def _run_name(self, job: GenerationJob) -> str:
-        return f"{job.model_id}_l{job.level}_{self._date_tag}"
+        suffix = "s2" if self.guidance_dir else ""
+        return f"{job.model_id}_l{job.level}{suffix}_{self._date_tag}"
+
+    def _load_guidance(self, task_id: str) -> Optional[str]:
+        if not self.guidance_dir:
+            return None
+        p = os.path.join(self.guidance_dir, f"{task_id}.md")
+        if not os.path.exists(p):
+            return None
+        with open(p, "r", encoding="utf-8") as f:
+            return f.read()
 
     def _output_path(self, job: GenerationJob) -> str:
         return os.path.join(
@@ -129,9 +143,15 @@ class GenerationScheduler:
             )
 
         try:
-            # Load prompt
+            # Load prompt (optionally with strategy-transfer guidance)
             from ..task import load_prompt
-            prompt = load_prompt(job.task_id, job.level, split_kernels=self._split_kernels)
+            guidance = self._load_guidance(job.task_id)
+            prompt = load_prompt(
+                job.task_id,
+                job.level,
+                split_kernels=self._split_kernels,
+                extra_guidance=guidance,
+            )
 
             # Build resilient client
             model_cfg = self.registry.get_model_config(job.model_id)

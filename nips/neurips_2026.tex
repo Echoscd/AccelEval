@@ -110,7 +110,7 @@
 
 
 \begin{abstract}
-We introduce \textsc{AccelEval}, a benchmark for evaluating large language models (LLMs) on translating sequential CPU programs into optimized CUDA kernels. Unlike prior kernel-generation benchmarks that focus on isolated GPU primitives, \textsc{AccelEval} stresses end-to-end acceleration across \textbf{42 production-style workloads} spanning scientific computing, graph analytics, financial engineering, dynamic programming, and operations research. Each task provides a C reference implementation, a three-scale input generator, and a deterministic validation oracle. We report results for six state-of-the-art models under a zero-hint prompting regime (L3), comparing compilation success, numerical correctness, and end-to-end speedup over optimized CPU baselines. The strongest model (Gemini~3.1~Pro) achieves an 88.9\% pass rate with a median speedup of $316\times$, while other models cluster between 47\% and 78\%. The gap concentrates on \emph{correctness-critical} HPC tasks (sparse linear algebra, multigrid, molecular dynamics), suggesting LLMs still struggle with fine-grained numerical reasoning under parallel execution.
+We introduce \textsc{AccelEval}, a benchmark for evaluating large language models (LLMs) on translating sequential CPU programs into optimized CUDA kernels. Unlike prior kernel-generation benchmarks that focus on isolated GPU primitives or PyTorch module replacement, \textsc{AccelEval} stresses \emph{end-to-end} acceleration across \textbf{43 production-style workloads} spanning scientific computing, graph analytics, financial engineering, dynamic programming, and operations research. Each task is compiled and executed as a whole program against a deterministic validation oracle, and is wall-clock timed from host pointer to host result---closing a loophole in prior setups where computation can be hidden in untimed initialization. We evaluate \textbf{seven state-of-the-art models} (Gemini~3.1~Pro, Claude~Opus~4.6, GPT-5.4, Qwen~3.6~Plus, Kimi~K2.5, GLM~5.1, DeepSeek~V3.2) at three input scales under a zero-hint prompt (L3). On the medium scale---our leaderboard setting---the strongest model (Gemini~3.1~Pro) passes 34 of 42 tasks, attains a geometric-mean speedup of $30.9\times$, and reaches $\mathrm{fast}_{10}=61.9\%$, while other models cluster between 24 and 33 passing tasks (57\% to 79\%). Beyond raw scoring, we formulate CUDA optimization as a \emph{strategy recommendation} problem over a structured algorithm space and release three calibrated baselines (nearest-neighbor transfer, greedy coordinate search, linear regression) plus a pairwise-diff attribution pipeline that identifies which concrete optimization patterns drive each speedup jump.
 \end{abstract}
 
 
@@ -118,29 +118,71 @@ We introduce \textsc{AccelEval}, a benchmark for evaluating large language model
 \section{Introduction}
 \label{sec:intro}
 
-GPU acceleration is the dominant path to scaling scientific and industrial workloads, yet authoring efficient CUDA remains the domain of specialists. Recent LLMs exhibit strong code-generation capability, raising the question: \emph{can an LLM automate the CPU-to-CUDA porting process end-to-end?}
+GPU acceleration is central to modern scientific computing, machine learning, financial engineering, graph analytics, and large-scale optimization. Yet writing efficient CUDA remains difficult: programmers must reason about parallelism, memory hierarchy, host--device transfer, synchronization, numerical stability, and hardware-specific libraries. As large language models (LLMs) become increasingly capable code generators, a natural question is: \emph{can they automate CPU-to-CUDA acceleration end-to-end, producing code that is not only correct but also practically faster?}
 
-Existing benchmarks answer this only partially. KernelBench~\citep{kernelbench} measures single-kernel generation; BabelTower~\citep{babeltower} targets code-level translation without correctness oracles. None evaluate \emph{realistic workloads} with full harnesses, multi-scale inputs, and performance comparison against tuned CPU baselines.
+Existing benchmarks only partially answer this question. General code benchmarks such as HumanEval~\citep{humaneval}, MBPP~\citep{mbpp}, SWE-bench~\citep{swebench}, LiveCodeBench~\citep{livecodebench}, and BigCodeBench~\citep{bigcodebench} measure functional correctness, but do not evaluate performance-critical GPU programming. GPU-focused benchmarks such as KernelBench~\citep{kernelbench}, TritonBench~\citep{tritonbench}, ComputeEval~\citep{computeeval}, ParEval~\citep{pareval}, and MultiKernelBench~\citep{multikernelbench} move closer to this setting, but typically focus on isolated kernels, short snippets, or framework-level operator replacement. They therefore leave open the harder question of whole-program acceleration: starting from a sequential CPU reference and producing a complete CUDA implementation that handles memory management, host--device transfer, kernel orchestration, and validated output at realistic input scales.
+
+\textsc{AccelEval} is designed around this end-to-end view. Each task exposes a single function, \texttt{solution\_compute}, that receives host-side inputs and must perform all device allocation, H2D transfer, kernel or library execution, D2H transfer, and cleanup inside the timed region. This design closes timing loopholes that arise when initialization or data movement is outside the measured path; in early versions of our harness, one frontier model achieved an apparent $10^{6}\times$ speedup by moving computation into an untimed setup routine. Each solution is checked against a deterministic CPU oracle and evaluated at three input scales, allowing us to separate correctness from scaling behavior.
+
+Beyond leaderboard results, we study \emph{why} generated CUDA code is fast. We formulate optimization as a strategy-recommendation problem over a structured algorithm space, introduce classical baselines for this setting, and build a pairwise-diff attribution pipeline that connects speedup improvements to specific optimization patterns such as tiling, warp-level reduction, template dispatch, library calls, and problem-specific precomputation.
 
 \paragraph{Contributions.}
 \begin{enumerate}
-  \item We release \textsc{AccelEval}, a curated suite of \textbf{42 CPU-to-CUDA tasks} across 20+ algorithmic categories, each with a reference implementation, binary I/O harness, validation oracle, and three input scales.
-  \item We define a three-level prompting protocol (L1: full hints; L2: brief hints; L3: zero hints) that disentangles raw capability from prompt engineering.
-  \item We present the first large-scale evaluation of six leading LLMs (Gemini~3.1~Pro, Claude~Opus~4.6, Qwen~3.6~Plus, Kimi~K2.5, GLM~5.1, DeepSeek~V3.2) under L3, reporting compile rate, pass rate, and end-to-end speedup.
-  \item Beyond leaderboard scores, we introduce a \textbf{decomposition pipeline}: an auto-detected \emph{optimization pattern database} combined with \emph{pairwise diff attribution} over multi-turn agent runs, enabling causal claims of the form ``pattern $P$ contributes $\Delta$ speedup.''
+  \item We release \textsc{AccelEval}, a curated suite of \textbf{43 CPU-to-CUDA tasks} across nine categories, each with a CPU reference, a deterministic validation oracle, and three input scales ($\sim$9\,ms / $\sim$0.25\,s / $\sim$5\,s median CPU baseline).
+  \item We adopt a \emph{unified single-function interface} (\texttt{solution\_compute}) that is evaluated end-to-end, closing the initialization and harness-level loopholes that can arise when only an inner kernel is timed.
+  \item We present a large-scale L3 evaluation of \textbf{seven} frontier LLMs at three input scales. On the medium leaderboard, Gemini~3.1~Pro leads with 34/42 passing tasks and a $30.9\times$ geometric-mean speedup; the runners-up trail by 1--10 passing tasks and $2$--$8\times$ in geometric-mean speedup.
+  \item We formulate CUDA optimization as strategy recommendation in a structured algorithm space $\mathcal{A}_0$, and release three calibrated baselines (nearest-neighbor transfer, greedy coordinate search, linear regression) to anchor what non-LLM methods can achieve from the same experience pool.
+  \item We introduce a \emph{decomposition pipeline}: an auto-detected optimization pattern database combined with pairwise-diff attribution over multi-turn agent runs, enabling causal claims of the form ``pattern $P$ contributes $\Delta$ speedup on problem class $C$.''
 \end{enumerate}
+
+
 
 \section{Related Work}
 \label{sec:related}
 
-\paragraph{LLM code generation benchmarks.}
-HumanEval~\citep{humaneval} and MBPP~\citep{mbpp} established text-to-code evaluation for Python. SWE-bench~\citep{swebench} pushed to repository-level fixes. None target GPU programming.
+\paragraph{General code-generation benchmarks.}
+HumanEval~\citep{humaneval} and MBPP~\citep{mbpp} established unit-test-based evaluation for short Python functions. Later benchmarks broadened the setting: SWE-bench~\citep{swebench} evaluates repository-level issue resolution, LiveCodeBench~\citep{livecodebench} emphasizes contamination-resistant competitive programming, and BigCodeBench~\citep{bigcodebench} tests complex library use and instruction following. These benchmarks are useful for measuring general coding ability, but they do not target GPU programming or runtime performance.
 
-\paragraph{GPU code benchmarks.}
-KernelBench~\citep{kernelbench} is the closest peer. It evaluates single-kernel replacements inside a PyTorch harness and reports speedups relative to \texttt{torch.compile}. Our setting differs in two ways: (i)~we evaluate \emph{whole-program} translation including I/O, memory management, and multi-kernel orchestration; (ii)~our reference is a pinned CPU implementation, giving a fixed absolute baseline.
+\paragraph{GPU kernel benchmarks.}
+KernelBench~\citep{kernelbench} is the closest prior benchmark: it asks models to replace PyTorch module bodies with custom CUDA or Triton kernels and scores speedup relative to framework baselines. TritonBench~\citep{tritonbench} focuses on Triton operator generation, while MultiKernelBench~\citep{multikernelbench} extends kernel generation to multiple accelerator backends. ComputeEval~\citep{computeeval} tests CUDA code generation on short prompts, and ParEval~\citep{pareval} studies parallel code generation across CUDA, OpenMP, MPI, HIP, and Kokkos. These benchmarks show that performance-aware code generation is distinct from ordinary functional synthesis, but they share three limitations that \textsc{AccelEval} is designed to address:
 
-\paragraph{Automatic parallelization and translation.}
-Prior work on source-to-source compilation (OpenACC, Bones~\citep{bones}, Par4All~\citep{par4all}) relies on static analysis and pragma hints. LLM-based translators like BabelTower~\citep{babeltower} and CodeRosetta~\citep{coderosetta} show promise but lack end-to-end execution validation.
+\begin{enumerate}
+  \item \emph{Granularity.} Prior benchmarks typically score a single kernel or short snippet rather than a complete accelerated program. Host-side memory management, multi-kernel orchestration, persistent device buffers, and library dispatch are often hidden by the harness or outside the task scope.
+  \item \emph{Timing boundaries.} Timing only an inner kernel can exclude initialization, data movement, or precomputation. In early versions of our harness, one frontier model obtained an apparent $10^{6}\times$ speedup by moving computation into an untimed setup routine. \textsc{AccelEval}'s single \texttt{solution\_compute} entry point places the full host-to-host path under the benchmark contract.
+  \item \emph{Input scale.} Most prior suites evaluate a single input size. This can obscure scaling behavior: a GPU implementation that is slower than CPU on small inputs may become much faster at scale, while a naive parallelization may pass small tests but fail to exploit larger workloads. \textsc{AccelEval} reports three deterministic input scales per task.
+\end{enumerate}
+
+Table~\ref{tab:bench-compare} summarizes these axes across recent suites.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Comparison of LLM code benchmarks on axes relevant to GPU acceleration. ``Scope'' is the unit of generation; ``timed'' indicates whether runtime speedup is measured; ``end-to-end'' means host-to-device transfer, computation, and device-to-host transfer are included in the benchmark contract; ``scales'' is the number of input sizes reported per task.}
+\label{tab:bench-compare}
+\begin{tabular}{@{}lllccc@{}}
+\toprule
+\textbf{Benchmark} & \textbf{Scope} & \textbf{Target} & \textbf{Timed} & \textbf{End-to-end} & \textbf{Scales} \\
+\midrule
+HumanEval      & function   & Python          & --- & ---  & 1 \\
+MBPP           & function   & Python          & --- & ---  & 1 \\
+SWE-bench      & repo patch & Python          & --- & ---  & 1 \\
+ComputeEval    & snippet    & CUDA C++        & --- & ---  & 1 \\
+KernelBench    & single kernel & CUDA/Triton  & \checkmark & partial & 1 \\
+TritonBench    & single kernel & Triton       & \checkmark & partial & 1 \\
+ParEval        & snippet    & CUDA/OpenMP/MPI & \checkmark & partial & 1 \\
+MultiKernelBench & single kernel & CUDA/ROCm/Ascend & \checkmark & partial & 1 \\
+BabelTower     & translation & C$\to$CUDA     & --- & --- & 1 \\
+\midrule
+\textsc{AccelEval} (ours) & whole program & CPU C $\to$ CUDA & \checkmark & \checkmark & 3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Auto-parallelization and program translation.}
+Classical source-to-source systems such as OpenACC, Bones~\citep{bones}, Par4All~\citep{par4all}, and PPCG~\citep{ppcg} translate analyzable loop nests to parallel code using directives, skeletons, or polyhedral analysis. More recent learning-based systems, including BabelTower~\citep{babeltower} and CodeRosetta~\citep{coderosetta}, learn program translation or parallelization patterns from code corpora. These systems are closely related to CPU-to-GPU translation, but they are usually evaluated by translation quality, compilation, or functional correctness rather than end-to-end speedup against a fixed CPU reference.
+
+\paragraph{HPC benchmarks and auto-tuning.}
+The tasks in \textsc{AccelEval} draw on established HPC benchmark suites and mini-apps, including GAP~\citep{gapbs}, HPCG~\citep{hpcg}, NAS Parallel Benchmarks~\citep{npb}, Rodinia~\citep{rodinia}, and miniWeather~\citep{miniweather}. We repurpose their computational kernels as LLM acceleration targets under a uniform correctness and timing harness. Our strategy-recommendation analysis (Section~\ref{sec:formulation}) is also related to auto-tuning systems such as ATLAS~\citep{atlas}, OpenTuner~\citep{opentuner}, Kernel Tuner~\citep{kerneltuner}, and learned schedule search in Halide and TVM~\citep{halide-autoscheduler,tvm}. Unlike these systems, we study how a natural-language model selects and implements optimization strategies, and we use classical search and regression methods (Section~\ref{sec:strategy}) as non-LLM baselines.
 
 \section{Problem Formulation}
 \label{sec:formulation}
@@ -283,18 +325,121 @@ three.
 \section{Benchmark Design}
 \label{sec:design}
 
-\subsection{Task Structure}
-Each \textsc{AccelEval} task is specified by: \texttt{task.json} (metadata), \texttt{cpu\_reference.c} (CPU implementation), \texttt{prompt\_template.yaml} (natural-language description), \texttt{task\_io.cu} (binary I/O adapter), and \texttt{gen\_data.py} (deterministic input generator).
+\textsc{AccelEval} consists of 43 tasks curated from established
+high-performance computing suites, domain-specific scientific codes,
+classical algorithm texts, and industrial operations-research workloads.
+For each task, we extract the algorithmically meaningful kernel, rewrite
+it against a \emph{single unified interface}, and ship three deterministic
+input scales (small, medium, large). This section describes each of these
+steps.
 
-\subsection{Three-Layer Execution Model}
-We decouple correctness from performance by separating the \textbf{harness} (timing and validation), \textbf{task I/O} (binary deserialization), and \textbf{solution} (compute only). Two interface modes govern timing:
-\begin{description}
-  \item[\texttt{init\_compute}] Large-memory tasks expose separate \texttt{initialize()} and \texttt{compute()} phases; only \texttt{compute()} is timed.
-  \item[\texttt{compute\_only}] Small tasks where allocation and transfer are part of the measured region.
-\end{description}
+\subsection{Task Sources and Extraction}
+\label{sec:sources}
+
+\paragraph{Source suites.}
+The 43 tasks are drawn from five families of prior work.
+
+\begin{itemize}
+  \item \textbf{HPC reference benchmarks} — kernels from the GAP Benchmark
+  Suite~\citep{gapbs} (connected components, PageRank, triangle
+  counting), HPCG~\citep{hpcg} (sparse matrix--vector, symmetric
+  Gauss--Seidel, multigrid V-cycle), the NAS Parallel Benchmarks~\citep{npb}
+  (conjugate-gradient, LU-SSOR, ADI pentadiagonal), the Rodinia
+  suite~\citep{rodinia} (BFS levels), and the
+  miniWeather~\citep{miniweather} mini-app.
+  \item \textbf{Scientific / simulation codes} — Smoothed Particle
+  Hydrodynamics (SPH) kernels for cell indexing, force computation, and
+  position integration; a heat-diffusion stencil; a discretized Hamilton--Jacobi--Bellman
+  solver for dynamic pricing.
+  \item \textbf{Classical algorithms} — textbook problems with well-known
+  complexity: single-source shortest paths (Bellman--Ford), maximum flow
+  (push--relabel), held-Karp traveling salesman, Smith--Waterman sequence
+  alignment, dynamic-time warping, DBSCAN clustering, Euclidean and
+  Hausdorff distance matrices, and Thompson NFA regex matching.
+  \item \textbf{Financial computing} — options pricing kernels (Black--Scholes,
+  Monte-Carlo path simulation, bond and repo pricing) and a batched
+  low-rank principal component analysis for portfolio construction, based
+  on FinanceBench-style workloads.
+  \item \textbf{Operations research} — dynamic-programming formulations for
+  network revenue management, inventory replenishment, Gittins-index
+  computation, robust value iteration, self-exciting pricing, Nash flows
+  over time, along with a first-order linear-programming solver and a
+  crew-pairing instance.
+\end{itemize}
+
+\paragraph{Extraction protocol.}
+For each source program we apply a three-step extraction. First, we
+\emph{isolate} the numerically dominant region by profiling the original
+code and selecting the region that consumes over 90\% of the runtime.
+Second, we \emph{decouple} that region from any surrounding I/O, driver
+harness, or library dependency; what remains is a pure-computation kernel
+expressed as a handful of C functions operating over host-visible buffers.
+Third, we \emph{rewrap} the kernel behind the unified interface of
+Section~\ref{sec:interface}, so that each benchmark, regardless of
+pedigree, exposes exactly the same contract to the language model.
+
+This pipeline removes two confounds: (i) legacy suites often couple the
+kernel to bespoke input parsers or build systems, making cross-task
+comparison meaningless; (ii) external library dependencies (BLAS,
+pthreads, MPI) obscure what the GPU code must replicate. After extraction,
+every task has the same shape: deterministic binary inputs, a single C
+reference, and a well-specified output.
+
+\subsection{End-to-End Timing and Three-Scale Inputs}
+\label{sec:interface}
+
+Every task exposes a single entry point through which the model-generated
+code receives host pointers for all inputs and must return host-side
+outputs. The entry point is responsible for the whole pipeline---device
+allocation, host-to-device transfer, kernel launch, device-to-host copy,
+and deallocation---and its full wall time is measured by CUDA events on
+every call. No portion of the work can be relocated into an uncounted
+setup phase. This is a deliberate departure from suites that time only
+the inner kernel: our target quantity is end-to-end acceleration, which
+is what an applied user experiences.
+
+To suppress cold-start noise, each evaluation runs a warmup phase
+before the timed phase. Warmup repeatedly invokes the solution on the
+true input until the first-call overheads---lazy CUDA context creation,
+JIT compilation of any kernels dispatched through runtime-library
+paths, page-locked allocation, and loading of constant memory---have
+settled. Only the subsequent timed trials are aggregated into the
+reported speedup. The warmup also exposes \emph{idempotence} failures:
+solutions that mutate their input buffers in place, or leak device
+state between calls, produce divergent trial-to-trial numbers and are
+caught by the per-trial oracle rather than silently yielding an
+optimistic average.
+
+Each task ships three deterministic input scales, covering four orders
+of magnitude of single-thread CPU baseline time. The \textbf{small}
+scale is calibrated so that the typical task completes its CPU reference
+in a handful of milliseconds---a median near ten milliseconds across the
+suite, with the longest single task under six seconds---making the full
+43-task sweep tractable for continuous integration on a laptop-class
+GPU. The \textbf{medium} scale, used for our headline leaderboard, shifts
+the central tendency of CPU time up by roughly an order of magnitude
+(median under half a second, average around three seconds, worst case
+about twenty seconds), so that fixed GPU overheads such as H2D transfer
+and kernel-launch latency are meaningfully amortized and speedup
+differences between implementations become separable. The \textbf{large}
+scale is deliberately heavy-tailed: the median CPU run is a few seconds,
+but the average is well over two minutes and the heaviest tasks---dense
+combinatorial solvers and pentadiagonal systems---run for tens of minutes
+on a single core, stressing both algorithmic scalability and memory
+hierarchy utilization on the GPU side. The three-scale design lets us
+observe how an LLM-generated kernel's speedup trends with problem size:
+some models produce kernels that scale well (speedup grows with $N$),
+while others plateau or degenerate on larger inputs.
 
 \subsection{Correctness Oracle}
-The solution's \texttt{output.txt} is compared against an expected output produced by the CPU reference, using either \textbf{exact} string comparison (integer/combinatorial tasks) or \textbf{numerical} comparison via \texttt{numpy.isclose} with task-specific $\mathrm{atol}$ and $\mathrm{rtol}$.
+The solution's textual output is compared against the expected output
+produced by the CPU reference. Each task declares one of two modes:
+\textbf{exact} string comparison (integer or combinatorial outputs) or
+\textbf{numerical} comparison via element-wise absolute and relative
+tolerances, with task-specific $\mathrm{atol}$ and $\mathrm{rtol}$.
+Tolerances are chosen tight enough to reject algorithmic bugs but loose
+enough to accommodate IEEE-754 rounding under reordered floating-point
+reductions on the GPU.
 
 \subsection{Prompting Levels}
 
@@ -319,24 +464,23 @@ L3 & None (task description only) & Measure autonomous capability \\
 \begin{table}[ht]
 \centering
 \small
-\caption{Task distribution across algorithmic categories (42 tasks total).}
+\caption{Distribution of the 43 curated tasks across algorithmic categories.}
 \label{tab:categories}
 \begin{tabular}{@{}lrl@{}}
 \toprule
-\textbf{Category} & \textbf{\# Tasks} & \textbf{Example} \\
+\textbf{Category} & \textbf{\#} & \textbf{Representative tasks} \\
 \midrule
-Dynamic programming          & 7 & \texttt{network\_rm\_dp}, \texttt{held\_karp\_tsp} \\
-Sparse linear algebra        & 4 & \texttt{hpcg\_spmv\_27pt}, \texttt{npb\_cg\_sparse\_solve} \\
-Financial computing          & 5 & \texttt{monte\_carlo}, \texttt{black\_scholes} \\
-Graph analytics              & 5 & \texttt{gapbs\_pagerank}, \texttt{bellman\_ford} \\
-Fluid simulation (SPH)       & 3 & \texttt{sph\_forces}, \texttt{sph\_cell\_index} \\
-Spatial distance / clustering& 3 & \texttt{dbscan}, \texttt{hausdorff\_distance} \\
-Optimization / LP            & 3 & \texttt{crew\_pairing}, \texttt{pdlp} \\
-Stencil simulation           & 2 & \texttt{hotspot\_2d}, \texttt{miniWeather} \\
-CFD solver                   & 2 & \texttt{npb\_lu\_ssor\_structured} \\
-Other (bioinformatics, stochastic, automata, \ldots) & 8 & --- \\
+Dynamic programming (OR)     & 9 & network revenue mgmt, robust value iteration, inventory replen. \\
+Financial computing          & 5 & Black--Scholes, Monte-Carlo, bond and repo pricing \\
+Graph analytics              & 5 & PageRank, triangle counting, connected components, BFS \\
+Sparse linear algebra        & 4 & SpMV, symmetric Gauss--Seidel, CG, multigrid \\
+Fluid simulation (SPH)       & 3 & cell index, force computation, position integration \\
+Spatial distance / cluster.  & 4 & DBSCAN, DTW, Euclidean, Hausdorff \\
+Optimization / LP            & 3 & PDLP, crew pairing, Motzkin--Straus \\
+CFD / stencil                & 4 & miniWeather, LU-SSOR, ADI pentadiagonal, hotspot \\
+Bioinformatics, geometry, automata, MAB & 6 & Smith--Waterman, regex, Thompson sampling, collision \\
 \midrule
-\textbf{Total}               & \textbf{42} & \\
+\textbf{Total}               & \textbf{43} & \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -355,7 +499,63 @@ For each \((\text{model}, \text{task}, \text{sample})\) tuple:
 \end{enumerate}
 
 \subsection{Metrics}
-\textbf{Compile rate} (fraction compiling), \textbf{Pass rate} (fraction compiling \emph{and} producing correct output), \textbf{Speedup} ($T_{\mathrm{CPU}} / T_{\mathrm{GPU}}$, median and best-of-$k$), and \textbf{$\mathrm{fast}_p$} (fraction with speedup $\geq p\times$, for $p \in \{1, 5, 10\}$).
+\label{sec:metrics}
+
+We report four headline metrics per (model, size) cell. Let $\mathcal{T}$
+denote the set of $N$ active tasks and $\mathcal{P}_m \subseteq \mathcal{T}$
+the subset where model $m$'s solution \emph{compiles and produces correct
+output} (``passes''). Let $s_{m,t} = T_{\mathrm{CPU},t} / T_{\mathrm{GPU},m,t}$
+be the end-to-end speedup of model $m$ on task $t$ over the pinned CPU
+baseline.
+
+\begin{description}
+\item[\#~pass / $N$] Cardinality of $\mathcal{P}_m$, i.e.\ the count of tasks
+  the model both compiles and gets bitwise-correct output for.
+  Reported alongside $N$ to avoid the misleading large-$\mathcal{P}_m$,
+  small-$N$ comparison.
+
+\item[$\mathrm{GM}\!\times$~(pass)]
+  Geometric mean of speedups over \emph{passed} tasks:
+  $\mathrm{GM}_m = \big(\prod_{t \in \mathcal{P}_m} s_{m,t}\big)^{1/|\mathcal{P}_m|}$.
+  We use geometric -- not arithmetic -- mean because speedups are
+  multiplicative ratios; arithmetic mean would be dominated by single
+  outliers (e.g.\ a $2{,}500\times$ task), and would also be sensitive to
+  whether one measures CPU/GPU or GPU/CPU. The geometric mean is the
+  unique aggregate consistent with the multiplicative scale.
+
+\item[$\mathrm{PAR}$-$\mathrm{GM}$~(pass)] \emph{Peak Attainment Ratio},
+  geometric mean. For each task $t$ we define a per-task best
+  $b_t = \max_{m'} s_{m',t}$ over the displayed model set. The model's PAR
+  on task $t$ is $r_{m,t} = s_{m,t} / b_t \in [0, 1]$. We then aggregate
+  $\mathrm{PAR}\text{-}\mathrm{GM}_m =
+   \big(\prod_{t \in \mathcal{P}_m} r_{m,t}\big)^{1/|\mathcal{P}_m|}$.
+  Intuition: a per-task $r_{m,t}$ of $1$ means the model \emph{is} the
+  per-task winner; PAR-GM near $1$ means the model is consistently a
+  per-task champion. Unlike raw speedups, PAR is task-difficulty-normalized:
+  a task with a $2{,}500\times$ ceiling and one with a $5\times$ ceiling
+  contribute symmetrically. We use this metric as the primary cross-model
+  comparator and also as the headline ``replication'' metric in the
+  strategy-transfer experiment (\S\ref{sec:strategy}), where $b_t$ is held
+  fixed at the per-task winner of Stage~1.
+
+\item[$\mathrm{fast}_{10}$] Fraction of $N$ tasks (\emph{not} of
+  $|\mathcal{P}_m|$) for which the model achieves $s_{m,t} \geq 10$. The
+  $N$-denominator is intentional: a model that passes few tasks but with
+  high speedup should not appear competitive on this metric. We use $10$
+  as the threshold because it is the qualitative break between
+  ``GPU-as-accelerator'' ($\geq 10\times$) and ``GPU-as-rewrite-experiment''
+  (lower).
+\end{description}
+
+We deliberately omit raw arithmetic means and median speedup over passed
+tasks. The arithmetic mean is statistically unsound for ratios; the
+median, while robust, hides single high-impact wins (e.g.\ Claude's
+$696\times$ lift on \texttt{npb\_lu\_ssor\_structured} after guidance) and
+is not invariant under the choice of measurement direction. Compile rate
+and pass rate are not separately reported in the leaderboard because the
+\#~pass / $N$ column already encodes both ($\#$~pass $\leq$ \#~compile
+$\leq N$); the difference is broken out in failure-mode analyses
+(\S\ref{sec:failures} and Appendix~\ref{app:badcases}).
 
 \subsection{Setup}
 All experiments run on a single NVIDIA L40S (\texttt{sm\_89}) with CUDA~12.4 and GCC~11. CPU baselines use a single thread pinned to core~0. Each model generates one sample per task at L3 with temperature~0.7.
@@ -365,36 +565,72 @@ All experiments run on a single NVIDIA L40S (\texttt{sm\_89}) with CUDA~12.4 and
 
 \subsection{Overall Results}
 
-Table~\ref{tab:overall} summarizes the six models on L3. Gemini~3.1~Pro leads in pass rate (88.9\%) and $\mathrm{fast}_{10}$~(86.7\%).
+Table~\ref{tab:overall} reports the seven models on L3 at the medium scale, our designated leaderboard size. Gemini~3.1~Pro leads on every metric: 83.3\% pass rate, $33\times$ median speedup, and 54.8\% of tasks crossing the $10\times$ threshold. Claude~Opus~4.6 follows at 78.6\% pass. Open-weight models (Qwen, Kimi, GLM, DeepSeek) cluster below: GLM~5.1 matches Claude in pass rate but achieves only $9.4\times$ median speedup, indicating that ``correctness'' and ``fast correctness'' are distinct skills. DeepSeek~V3.2 is the weakest model overall, with 31\% of tasks failing to compile---primarily due to missing CUDA library includes and incorrect template instantiations.
 
 \begin{table}[ht]
 \centering
 \small
-\caption{Overall results on \textsc{AccelEval}-42 (L3, single sample). ``Sp.'' denotes end-to-end speedup over the CPU baseline.}
+\caption{Overall results on \textsc{AccelEval}-43 (L3, single sample) at the \textbf{medium} scale. ``Sp.'' denotes end-to-end speedup over the pinned CPU baseline; $\mathrm{fast}_p$ is the fraction of tasks whose speedup is $\geq p\times$ (computed over all 42 evaluated tasks, so compile/correctness failures count as $0$ speedup).}
 \label{tab:overall}
 \begin{tabular}{@{}lrrrrrr@{}}
 \toprule
 \textbf{Model} & \textbf{Compile} & \textbf{Pass} & \textbf{Median Sp.} & \textbf{$\mathrm{fast}_1$} & \textbf{$\mathrm{fast}_5$} & \textbf{$\mathrm{fast}_{10}$} \\
 \midrule
-Gemini 3.1 Pro     & 93.3\% & \textbf{88.9\%} & \textbf{316$\times$} & \textbf{91.1\%} & \textbf{88.9\%} & \textbf{86.7\%} \\
-Claude Opus 4.6    & \textbf{95.6\%} & 77.8\% & 213$\times$ & 88.9\% & 80.0\% & 80.0\% \\
-Qwen 3.6 Plus      & 88.9\% & 64.4\% & 259$\times$ & 80.0\% & 73.3\% & 73.3\% \\
-Kimi K2.5          & 78.9\% & 60.5\% & 261$\times$ & 71.1\% & 68.4\% & 68.4\% \\
-GLM 5.1            & 82.8\% & 62.1\% & 228$\times$ & 65.5\% & 58.6\% & 58.6\% \\
-DeepSeek V3.2      & 55.0\% & 47.5\% & 226$\times$ & 52.5\% & 47.5\% & 45.0\% \\
+Gemini 3.1 Pro     & 92.9\% & \textbf{83.3\%} & \textbf{32.9$\times$} & \textbf{66.7\%} & \textbf{59.5\%} & \textbf{54.8\%} \\
+Claude Opus 4.6    & \textbf{92.9\%} & 78.6\% & 16.9$\times$ & 57.1\% & 45.2\% & 40.5\% \\
+GLM 5.1            & 85.7\% & 76.2\% &  9.4$\times$ & 57.1\% & 45.2\% & 38.1\% \\
+Qwen 3.6 Plus      & 90.5\% & 73.8\% & 15.3$\times$ & 52.4\% & 40.5\% & 40.5\% \\
+Kimi K2.5          & 78.6\% & 64.3\% & 12.0$\times$ & 45.2\% & 40.5\% & 33.3\% \\
+GPT-5.4            & 81.0\% & 59.5\% & 18.7$\times$ & 42.9\% & 35.7\% & 35.7\% \\
+DeepSeek V3.2      & 69.0\% & 59.5\% &  7.3$\times$ & 40.5\% & 31.0\% & 19.0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Scale Sensitivity}
+
+Table~\ref{tab:scales-results} cross-tabulates median speedup at each scale. The rank order is stable, but the absolute speedup grows steeply with input size: Gemini's median speedup rises from $15\times$ (small) to $33\times$ (medium) to $93\times$ (large), reflecting the familiar GPU curve in which fixed launch/transfer overhead amortizes over larger problems. Pass rates shift less, which is consistent with the view that passing or failing is determined by \emph{algorithmic correctness} (a scale-invariant property) while speedup is dominated by \emph{resource utilization} at scale.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Median end-to-end speedup at three input scales (L3). Pass rate is reported in parentheses. Large-scale entries marked (---) are pending in a still-running evaluation pass (see Section~\ref{sec:limitations}).}
+\label{tab:scales-results}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+\textbf{Model} & \textbf{Small} & \textbf{Medium} & \textbf{Large} \\
+\midrule
+Gemini 3.1 Pro    & 15.1$\times$ (83.3\%) & 32.9$\times$ (83.3\%) & \textbf{93.1$\times$ (85.7\%)} \\
+Claude Opus 4.6   &  7.6$\times$ (81.0\%) & 16.9$\times$ (78.6\%) & 28.3$\times$ (76.2\%) \\
+GPT-5.4           &  4.1$\times$ (59.5\%) & 18.7$\times$ (59.5\%) & --- \\
+GLM 5.1           &  7.9$\times$ (76.2\%) &  9.4$\times$ (76.2\%) & --- \\
+Qwen 3.6 Plus     &  2.4$\times$ (76.2\%) & 15.3$\times$ (73.8\%) & --- \\
+Kimi K2.5         &  5.5$\times$ (71.4\%) & 12.0$\times$ (64.3\%) & --- \\
+DeepSeek V3.2     &  8.2$\times$ (64.3\%) &  7.3$\times$ (59.5\%) & --- \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{Per-Category Analysis}
-Gemini dominates dynamic programming and graph analytics; Claude leads in bioinformatics and selected sparse linear algebra tasks; Qwen and Kimi are competitive on embarrassingly-parallel workloads (Monte~Carlo, stencil).
+
+Category-level pass rates are heterogeneous:
+\begin{itemize}
+  \item \textbf{Embarrassingly parallel (Monte~Carlo, Black--Scholes, element-wise stencils)}: all seven models pass consistently with $>50\times$ speedup on medium. Here the L3 gap between frontier and open-weight is narrow.
+  \item \textbf{Dynamic programming (Bellman-Ford, held-Karp TSP, HJB value iteration, inventory-replenishment)}: Gemini and Claude lead; open-weight models frequently produce correct but serial ``one-block'' kernels that underutilize the GPU.
+  \item \textbf{Sparse linear algebra (HPCG SpMV/SymGS/MG, NPB CG, SpMV-CSR)}: the sharpest differentiator. Sparse patterns defeat the four weakest models on multiple tasks; only Gemini attains consistent correctness with meaningful speedup on the full sparse suite.
+  \item \textbf{Graph analytics (GAP PageRank, triangle count, connected components, BFS, push-relabel max-flow)}: Claude edges out Gemini on push-relabel; Gemini leads on the rest.
+  \item \textbf{Financial computing (bonds pricing, repo pricing, batched portfolio optimization)}: all leaders use cuBLAS/cuSOLVER; models that attempt hand-written LU factorization typically produce numerically unstable results at medium scale.
+\end{itemize}
 
 \subsection{Failure Modes}
-We classify failures into three buckets:
+\label{sec:failures}
+
+We classify failures into four buckets, counted across the $7 \times 42 = 294$ medium evaluations:
 \begin{itemize}
-  \item \textbf{Compile fail}: missing CUDA include, incorrect kernel signature, invalid template instantiation.
-  \item \textbf{Wrong result}: compiled and ran, but output mismatched the oracle---usually race conditions, bad reductions, or boundary errors.
-  \item \textbf{Correct but slow}: $<1\times$ speedup---typically excessive synchronization or launch overhead on tiny inputs.
+  \item \textbf{Compile fail} ($\approx 14\%$): missing or mis-spelled CUDA library headers (cusolverDn*, cub::*), incorrect kernel signature against the declared interface, invalid template instantiation. DeepSeek~V3.2 accounts for $30\%$ of all compile failures.
+  \item \textbf{Correctness fail} ($\approx 12\%$): compiled and ran, but output mismatched the oracle. Root causes concentrate in race conditions on reductions, off-by-one errors at tile boundaries, and incorrect handling of the in-place update pattern in Gauss-Seidel sweeps.
+  \item \textbf{Correct but slow} ($\approx 6\%$): $<1\times$ speedup. Almost always excessive synchronization or the aforementioned ``serial one-block'' anti-pattern.
+  \item \textbf{Universal failures}: on two tasks (\texttt{hpcg\_mg\_vcycle} multigrid V-cycle, \texttt{npb\_sp\_adi\_pentadiagonal} ADI pentadiagonal solve), fewer than three of the seven models produce a correct solution at medium scale. Both involve cross-iteration data dependencies that resist naive kernel extraction.
 \end{itemize}
 
 \section{Decomposition Analysis: What Makes the Kernel Fast?}
@@ -742,6 +978,83 @@ C-to-CUDA compiler for GPUs.
 M.\ Amini et al.\ (2012) Par4All: From convex array regions to heterogeneous
 computing.
 {\it IMPACT}.
+
+\bibitem[Verdoolaege et al.(2013)]{ppcg}
+S.\ Verdoolaege, J.\ Carlos Juega, A.\ Cohen, J.\ I.\ G\'omez, C.\ Tenllado,
+and F.\ Catthoor.\ (2013) Polyhedral parallel code generation for CUDA.
+{\it ACM TACO}, 9(4):54.
+
+\bibitem[Jain et al.(2024)]{livecodebench}
+N.\ Jain et al.\ (2024) LiveCodeBench: Holistic and contamination-free evaluation
+of large language models for code.
+{\it arXiv preprint arXiv:2403.07974}.
+
+\bibitem[Zhuo et al.(2024)]{bigcodebench}
+T.\ Y.\ Zhuo et al.\ (2024) BigCodeBench: Benchmarking code generation with
+diverse function calls and complex instructions.
+{\it arXiv preprint arXiv:2406.15877}.
+
+\bibitem[NVIDIA(2024)]{computeeval}
+NVIDIA.\ (2024) ComputeEval: Evaluating LLMs on accelerated computing code
+generation. \url{https://github.com/NVIDIA/compute-eval}.
+
+\bibitem[Nichols et al.(2024)]{pareval}
+D.\ Nichols, J.\ H.\ Davis, Z.\ Xie, A.\ Rajaram, and A.\ Bhatele.\ (2024)
+Can large language models write parallel code?
+{\it HPDC}.
+
+\bibitem[Li et al.(2025)]{tritonbench}
+Z.\ Li et al.\ (2025) TritonBench: Benchmarking large language model
+capabilities for generating Triton operators.
+{\it arXiv preprint arXiv:2502.14752}.
+
+\bibitem[Wei et al.(2025)]{multikernelbench}
+Z.\ Wei et al.\ (2025) MultiKernelBench: A multi-platform benchmark for
+kernel generation.
+{\it arXiv preprint}.
+
+\bibitem[Beamer et al.(2015)]{gapbs}
+S.\ Beamer, K.\ Asanovi\'c, and D.\ Patterson.\ (2015) The GAP Benchmark Suite.
+{\it arXiv preprint arXiv:1508.03619}.
+
+\bibitem[Dongarra et al.(2016)]{hpcg}
+J.\ Dongarra, M.\ A.\ Heroux, and P.\ Luszczek.\ (2016) High-performance conjugate-gradient
+benchmark: A new metric for ranking high-performance computing systems.
+{\it IJHPCA}, 30(1):3--10.
+
+\bibitem[Bailey et al.(1991)]{npb}
+D.\ H.\ Bailey et al.\ (1991) The NAS Parallel Benchmarks.
+{\it IJHPCA}, 5(3):63--73.
+
+\bibitem[Che et al.(2009)]{rodinia}
+S.\ Che et al.\ (2009) Rodinia: A benchmark suite for heterogeneous computing.
+{\it IISWC}.
+
+\bibitem[Norman et al.(2020)]{miniweather}
+M.\ Norman et al.\ (2020) miniWeather: A mini-app for teaching parallel programming.
+\url{https://github.com/mrnorman/miniWeather}.
+
+\bibitem[van Werkhoven(2019)]{kerneltuner}
+B.\ van Werkhoven.\ (2019) Kernel Tuner: A search-optimizing GPU code auto-tuner.
+{\it FGCS}, 90:347--358.
+
+\bibitem[Ansel et al.(2014)]{opentuner}
+J.\ Ansel et al.\ (2014) OpenTuner: An extensible framework for program autotuning.
+{\it PACT}.
+
+\bibitem[Whaley \& Dongarra(1998)]{atlas}
+R.\ C.\ Whaley and J.\ J.\ Dongarra.\ (1998) Automatically tuned linear algebra software.
+{\it SC}.
+
+\bibitem[Adams et al.(2019)]{halide-autoscheduler}
+A.\ Adams et al.\ (2019) Learning to optimize halide with tree search and
+random programs.
+{\it ACM TOG}, 38(4).
+
+\bibitem[Chen et al.(2018)]{tvm}
+T.\ Chen et al.\ (2018) TVM: An automated end-to-end optimizing compiler for
+deep learning.
+{\it OSDI}.
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -780,6 +1093,184 @@ the provided harness.
 \end{lstlisting}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Bad-Case Analysis: Three Representative Failure Patterns}
+\label{app:badcases}
+
+This appendix dissects three tasks with high failure rates across
+the eight evaluated models. Each illustrates a distinct failure mode
+that recurs throughout the benchmark: numerical fragility, an
+intrinsic GPU ceiling, and a toolchain limitation. Together they
+explain $\approx 35\%$ of all observed correctness or compile failures
+on \texttt{medium} inputs.
+
+\subsection{Numerical Fragility: \texttt{bonds\_pricing}}
+\label{app:badcase-bonds}
+
+\textbf{Task.} Faithful port of FinanceBench bond-pricing kernels --
+embarrassingly parallel over $N$ bonds, but each bond requires
+yield-to-maturity Newton iteration plus discounted-cashflow
+summation, where the reference uses \texttt{double} throughout.
+
+\textbf{Outcome.} Of eight models, only one (\textsc{Gemini}) passes
+\texttt{medium}, achieving $120.6\times$. The remaining seven split
+into two compile failures and five correctness failures. Despite the
+algorithm being trivially parallel, every correctness failure
+manifests as a different first-bond price, exposing distinct bugs:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lrrrl}
+\toprule
+Model & First fail & Got & Expected & Root cause \\
+\midrule
+\textsc{GPT-5.4}  & idx 0   & $1{\times}10^{30}$ & $93.45$ & sentinel write-through \\
+\textsc{V4 Pro}   & idx 3   & $8.4{\times}10^{26}$ & $1.9{\times}10^{8}$ & \texttt{MAX\_LEGS=32} cap \\
+\textsc{Qwen 3.6} & idx 0   & $117.4$ & $93.45$ & all-\texttt{float} Newton diverges \\
+\textsc{Kimi K2.5}& idx 0   & $103.4$ & $93.45$ & cashflow off-by-one \\
+\textsc{V3.2}     & idx 116 & $93.53$ & $93.51$ & \texttt{(float)} cast at output \\
+\bottomrule
+\end{tabular}
+\caption{Per-model correctness failure on \texttt{bonds\_pricing}.}
+\end{table}
+
+\textit{Pattern A -- defensive sentinel.} \textsc{GPT-5.4} introduces
+\texttt{\#define INVALID\_RESULT 1.0e30f} and writes it whenever a
+self-imposed input check fails:
+\begin{lstlisting}[style=cuda,basicstyle=\ttfamily\footnotesize]
+if (im < 1 || im > 12 || mm < 1 || mm > 12 ||
+    id < 1 || id > 31 || md < 1 || md > 31 ||
+    coupon_freq_decoded <= 0.0f) {
+    prices[i*4 + 0] = INVALID_RESULT; ... return;  // fires for every bond
+}
+\end{lstlisting}
+The \texttt{coupon\_freq} decoder the model wrote is the bug; the
+guard fires for every input. \textsc{V4 Pro} hard-codes
+\texttt{MAX\_LEGS = 32} and writes a 1e30 sentinel when a bond
+exceeds it; medium-scale 30-year semi-annual bonds have 60 legs,
+tripping the cap from the third bond onward. The sentinel then
+propagates through downstream arithmetic, yielding $8{\times}10^{26}$.
+
+\textit{Pattern B -- precision-induced divergence.} \textsc{Qwen 3.6}
+performs the entire Newton iteration in single precision:
+\begin{lstlisting}[style=cuda,basicstyle=\ttfamily\footnotesize]
+float dy = -f_val / dnpv;  y += dy;          // catastrophic cancellation
+npv_final += coupons[k] * powf(1.0f + y/freq, -freq * t);
+\end{lstlisting}
+The Jacobian becomes ill-conditioned and the iterate latches at the
+clipped upper bound $y=0.5$. The resulting price is $26\%$ too high.
+
+\textit{Pattern C -- structural off-by-one.} \textsc{Kimi K2.5} treats
+\texttt{numCashFlows} as both ``coupon count'' and ``coupon plus
+redemption count,'' overwriting the last coupon leg with the
+redemption payment. The error is one missing coupon's present value
+($\approx 10\%$).
+
+\textit{Pattern D -- output-side truncation.} \textsc{V3.2} computes
+in \texttt{double} but stores via \texttt{prices[i] = (float)dirty}.
+By the 116th bond, accumulated rounding crosses
+$\mathrm{rtol}=10^{-4}$. This is the \emph{only} failure within
+$0.1\%$ of the reference and would pass under either a wider
+tolerance or \texttt{double} output buffers.
+
+\textit{Compile failures.} \textsc{Claude Opus 4.6} emitted a literal
+\texttt{```c} markdown fence into the \texttt{.cu} file (output
+formatting bug). \textsc{GLM 5.1} wrote a static initializer with
+more entries than the declared array dimension.
+
+\textbf{Takeaway.} The five correctness failures are not a single
+``precision issue'' but four orthogonal bugs: defensive sentinels
+(\textsc{GPT-5.4}, \textsc{V4 Pro}), wrong-precision algorithm
+(\textsc{Qwen}), off-by-one structural mistake (\textsc{Kimi}), and
+final-stage truncation (\textsc{V3.2}). A benchmark that reports only
+``correct/incorrect'' obscures this diversity.
+
+\subsection{Intrinsic GPU Ceiling: \texttt{hpcg\_mg\_vcycle}}
+\label{app:badcase-hpcg}
+
+\textbf{Task.} HPCG geometric multigrid V-cycle: pre-smooth, restrict
+residual, recurse on coarser grid, prolongate correction,
+post-smooth. The CPU reference at \texttt{medium} runs in
+$180\,\mathrm{ms}$.
+
+\textbf{Outcome.} Only \textsc{Gemini} produces a correct solution,
+and it runs at $0.70\times$ -- \emph{slower than the CPU baseline}.
+The other seven models split: two compile failures
+(\textsc{Kimi}: ill-formed \texttt{cudaMalloc} macro;
+\textsc{V3.2}: chained pointer assignment across types) and five
+correctness failures.
+
+\textbf{Why even the winner is sub-CPU.} The \texttt{nsys} profile
+of Gemini's solution shows
+\texttt{memcpy\_overhead\_ms} $=682\,\mathrm{ms}$ against
+\texttt{cpu\_baseline\_ms} $=180\,\mathrm{ms}$. The host-to-device
+transfer alone is nearly $4\times$ the entire CPU runtime; multigrid
+on a $128^3$-class grid does not amortize the transfer when the
+arithmetic intensity is bounded by sparse 27-point stencil
+operations. We retain this task in the suite as a deliberate
+\emph{negative-result anchor}: any benchmark that does not contain at
+least one task where the GPU loses must be suspect.
+
+\textbf{Why the non-winners fail.} The five correctness failures all
+involve mishandled grid coarsening: most models compute the
+fine-to-coarse mapping (\texttt{f2c}) inline rather than precomputing
+it, leading to off-by-one errors at level boundaries that compound
+multiplicatively across V-cycles. Multigrid is famously the
+``research-grade'' kernel of HPC; its inclusion is intentional.
+
+\subsection{Toolchain Limitation: \texttt{batched\_lhpca\_portfolio}}
+\label{app:badcase-lhpca}
+
+\textbf{Task.} Batched portfolio optimization requiring repeated
+Cholesky factorization of $N{\times}N$ covariance matrices and
+matrix-vector products. The CPU reference uses
+\texttt{malloc}-allocated dense linear algebra; CPU \texttt{medium}
+takes $19.8\,\mathrm{s}$.
+
+\textbf{Outcome.} Only two models pass: \textsc{Gemini} ($103.7\times$,
+self-rolled batched Cholesky) and \textsc{Qwen} ($1.9\times$,
+brute-force without library calls). The remaining six all fail at
+build time, four with linker errors of the form
+\texttt{undefined reference to `cublasCreate\_v2'} and
+\texttt{`cusolverDnSpotrf\_bufferSize'}.
+
+\textbf{Root cause is the toolchain, not the model.} The benchmark's
+default build command (\texttt{compile.py}) is
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize]
+nvcc -O2 -arch=sm_89 -I include harness.cu task_io.cu solution.cu -o solution
+\end{lstlisting}
+with no \texttt{-lcublas -lcusolver}. Models that reach for
+\textsc{cuSOLVER} for batched Cholesky -- the canonical correct choice
+for this workload -- are punished by the link step. Self-implemented
+Cholesky (\textsc{Gemini}) wins; brute-force (\textsc{Qwen}) compiles
+but yields only $1.9\times$ because it cannot exploit
+warp-cooperative triangular solves at the scale a tuned library
+would.
+
+\textbf{Takeaway.} This task exposes a benchmark-honesty issue: a
+compilation-only environment under-rewards the most idiomatic CUDA
+solution. We document this rather than ``fix'' it because the
+$103.7\times$ ceiling Gemini achieves \emph{without} libraries
+demonstrates the algorithmic headroom available, and the
+two-pass design (with and without libraries) would require
+re-instrumenting every task. An informed reader of the leaderboard
+should view per-task best as the meaningful comparison and treat
+\texttt{batched\_lhpca\_portfolio} as a measure of
+``CUDA-from-scratch'' rather than ``CUDA-with-ecosystem.''
+
+\subsection{Cross-Cutting Observation}
+
+The three patterns are mutually disjoint. Numerical fragility
+(\S\ref{app:badcase-bonds}) is a model property; the GPU ceiling
+(\S\ref{app:badcase-hpcg}) is a workload property; the toolchain
+limitation (\S\ref{app:badcase-lhpca}) is a benchmark-design property.
+Strategy-transfer experiments
+(\S\ref{sec:strategy} in the main text) are most effective for the
+first category, ineffective for the second, and orthogonal to the
+third.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \newpage
 \input{checklist.tex}

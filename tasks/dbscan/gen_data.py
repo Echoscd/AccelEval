@@ -26,9 +26,10 @@ from framework.orbench_io_py import write_input_bin
 SIZES = {
     "small":  {"N": 10000,  "eps_x10000": 300, "minPts": 4, "seed": 42,
                "num_clusters": 15, "cluster_std": 0.02, "noise_frac": 0.05},
-    "medium": {"N": 100000, "eps_x10000": 100, "minPts": 8, "seed": 42,
+    "medium": {"N": 40000,  "eps_x10000": 120, "minPts": 8, "seed": 42,
                "num_clusters": 30, "cluster_std": 0.008, "noise_frac": 0.05},
-    "large":  {"N": 50000,  "eps_x10000": 80,  "minPts": 8, "seed": 42, "num_clusters": 40, "cluster_std": 0.006, "noise_frac": 0.05},
+    "large":  {"N": 200000, "eps_x10000": 80,  "minPts": 8, "seed": 42,
+               "num_clusters": 40, "cluster_std": 0.006, "noise_frac": 0.05},
 }
 
 

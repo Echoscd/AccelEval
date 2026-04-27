@@ -13,7 +13,7 @@ from framework.orbench_io_py import write_input_bin
 
 SIZES = {
     "small":  {"n": 8192,   "neighbors_per_row": 12, "max_iters": 40, "tol_exp": 8, "seed": 42},
-    "medium": {"n": 32768,  "neighbors_per_row": 16, "max_iters": 50, "tol_exp": 8, "seed": 42},
+    "medium": {"n": 131072, "neighbors_per_row": 32, "max_iters": 120, "tol_exp": 8, "seed": 42},
     "large":  {"n": 131072, "neighbors_per_row": 20, "max_iters": 60, "tol_exp": 8, "seed": 42},
 }
 

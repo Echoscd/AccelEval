@@ -26,8 +26,8 @@ from framework.orbench_io_py import write_input_bin
 SIZES = {
     "small":  {"N": 1000,  "num_clusters": 10,  "cluster_radius": 8.0,
                "poly_r_min": 0.5, "poly_r_max": 1.5, "world_size": 100.0, "seed": 42},
-    "medium": {"N": 10000, "num_clusters": 30,  "cluster_radius": 10.0,
-               "poly_r_min": 0.3, "poly_r_max": 1.5, "world_size": 300.0, "seed": 42},
+    "medium": {"N": 30000, "num_clusters": 50,  "cluster_radius": 10.0,
+               "poly_r_min": 0.3, "poly_r_max": 1.5, "world_size": 400.0, "seed": 42},
     "large":  {"N": 50000, "num_clusters": 80,  "cluster_radius": 12.0,
                "poly_r_min": 0.2, "poly_r_max": 2.0, "world_size": 600.0, "seed": 42},
 }

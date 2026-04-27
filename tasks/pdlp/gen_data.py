@@ -30,7 +30,7 @@ from framework.orbench_io_py import write_input_bin
 
 SIZES = {
     "small":  {"num_vars": 500,   "num_constraints": 200,   "nnz_per_col": 4, "num_iters": 500,  "seed": 42},
-    "medium": {"num_vars": 5000,  "num_constraints": 2000,  "nnz_per_col": 4, "num_iters": 1000, "seed": 42},
+    "medium": {"num_vars": 15000, "num_constraints": 6000,  "nnz_per_col": 4, "num_iters": 1500, "seed": 42},
     "large":  {"num_vars": 50000, "num_constraints": 20000, "nnz_per_col": 4, "num_iters": 2000, "seed": 42},
 }
 

@@ -144,9 +144,18 @@ This makes it easier to profile and optimize each stage. Guidelines:
 """
 
 
-def generate_prompt(task_id: str, level: int, split_kernels: bool = False) -> str:
+def generate_prompt(
+    task_id: str,
+    level: int,
+    split_kernels: bool = False,
+    extra_guidance: Optional[str] = None,
+) -> str:
     """
     Assemble a complete prompt for *task_id* at difficulty *level* (1, 2, or 3).
+
+    If *extra_guidance* is given, an "Expert Strategy Guidance" section is
+    appended after the hints section. Used by the strategy-transfer pipeline
+    to feed a recipe distilled from another model's winning solution.
 
     Returns:
         Markdown string ready to send to an LLM.
@@ -239,6 +248,17 @@ def generate_prompt(task_id: str, level: int, split_kernels: bool = False) -> st
             hints_section = f"\n\n## Optimization Hints\n\n{hints}\n"
     # L3: no hints
 
+    # 9b. Expert strategy guidance (optional, from strategy-transfer pipeline)
+    guidance_section = ""
+    if extra_guidance and extra_guidance.strip():
+        guidance_section = (
+            "\n\n## Expert Strategy Guidance\n\n"
+            "The following optimization recipe was distilled from a known-fast "
+            "CUDA solution to this task. Treat it as advice, not literal code: "
+            "implement the techniques in your own style.\n\n"
+            f"{extra_guidance.strip()}\n"
+        )
+
     # 10. Response format (mode-dependent)
     if task.interface_mode == "compute_only":
         response_fmt = RESPONSE_FORMAT_COMPUTE_ONLY
@@ -259,6 +279,7 @@ def generate_prompt(task_id: str, level: int, split_kernels: bool = False) -> st
         + algo_section
         + cpu_section
         + hints_section
+        + guidance_section
         + response_format_section
     )
 

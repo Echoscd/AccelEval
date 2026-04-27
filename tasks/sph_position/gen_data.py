@@ -25,8 +25,8 @@ from framework.orbench_io_py import write_input_bin
 
 SIZES = {
     "small":  {"N": 50000,    "seed": 42},
-    "medium": {"N": 500000,   "seed": 42},
-    "large":  {"N": 5000000,  "seed": 42},
+    "medium": {"N": 15000000, "seed": 42},
+    "large":  {"N": 20000000, "seed": 42},
 }
 
 

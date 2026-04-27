@@ -94,9 +94,18 @@ def get_task_dir(task_id: str) -> str:
     return os.path.join(TASKS_DIR, task_id)
 
 
-def load_prompt(task_id: str, level: int, split_kernels: bool = False) -> str:
+def load_prompt(
+    task_id: str,
+    level: int,
+    split_kernels: bool = False,
+    extra_guidance: Optional[str] = None,
+) -> str:
     """
     Load prompt for a task at a given difficulty level (1, 2, or 3).
+
+    If *extra_guidance* is given, a recipe section is appended at the end
+    of the assembled prompt (strategy-transfer pipeline). Only supported
+    via the template path.
 
     Resolution order:
       1. prompt_template.yaml  →  assembled by generate_prompt.py  (preferred)
@@ -108,7 +117,11 @@ def load_prompt(task_id: str, level: int, split_kernels: bool = False) -> str:
     tmpl_path = os.path.join(task_dir, "prompt_template.yaml")
     if os.path.exists(tmpl_path):
         from .generate_prompt import generate_prompt
-        return generate_prompt(task_id, level, split_kernels=split_kernels)
+        return generate_prompt(
+            task_id, level,
+            split_kernels=split_kernels,
+            extra_guidance=extra_guidance,
+        )
 
     # Fallback: static markdown files
     prompt_path = os.path.join(task_dir, f"prompt_l{level}.md")

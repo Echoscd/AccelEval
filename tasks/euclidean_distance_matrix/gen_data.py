@@ -22,7 +22,7 @@ from framework.orbench_io_py import write_input_bin
 
 SIZES = {
     "small":  {"ref_nb": 128,  "query_nb": 128,  "dim": 32,  "seed": 42},
-    "medium": {"ref_nb": 512,  "query_nb": 512,  "dim": 128, "seed": 42},
+    "medium": {"ref_nb": 1024, "query_nb": 1024, "dim": 256, "seed": 42},
     "large":  {"ref_nb": 2048, "query_nb": 2048, "dim": 256, "seed": 42},
 }
 

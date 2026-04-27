@@ -26,8 +26,8 @@ from framework.orbench_io_py import write_input_bin
 
 SIZES = {
     "small":  {"rows": 2048,  "cols": 512,  "seed": 9},
-    "medium": {"rows": 8192,  "cols": 1024, "seed": 9},
-    "large":  {"rows": 32768, "cols": 2048, "seed": 9},
+    "large": {"rows": 65536, "cols": 4096, "seed": 9},
+    "medium":  {"rows": 32768, "cols": 2048, "seed": 9},
 }
 
 

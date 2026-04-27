@@ -13,7 +13,7 @@ from framework.orbench_io_py import write_input_bin
 
 SIZES = {
     "small":  {"n": 65536,  "component_size": 2048, "num_offsets": 6, "neighbor_rounds": 2, "num_samples": 1024},
-    "medium": {"n": 262144, "component_size": 4096, "num_offsets": 7, "neighbor_rounds": 2, "num_samples": 2048},
+    "medium": {"n": 3145728, "component_size": 4096, "num_offsets": 8, "neighbor_rounds": 2, "num_samples": 2048},
     "large":  {"n": 524288, "component_size": 4096, "num_offsets": 8, "neighbor_rounds": 2, "num_samples": 4096},
 }
 

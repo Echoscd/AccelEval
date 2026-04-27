@@ -28,13 +28,13 @@ from framework.orbench_io_py import write_input_bin
 # Size definitions: each maps to a CSV file from the heurigym dataset
 # ---------------------------------------------------------------------------
 SIZES = {
-    "small":  {"instance": "DataA_chunk3_id1", "subdir": "demo"},      # ~37 legs
-    "medium": {"instance": "DataA_chunk15_id1", "subdir": "eval"},     # ~206 legs
-    "large":  {"instance": "DataB_chunk5_id1",  "subdir": "eval"},     # ~2239 legs
+    "small":  {"instance": "DataA_chunk15_id1", "subdir": "eval"},     # ~206 legs
+    "medium": {"instance": "DataB_chunk5_id1",  "subdir": "eval"},     # ~2239 legs
+    "large":  {"instance": "DataB_chunk15_id1", "subdir": "eval"},     # ~6799 legs
 }
 
 # Where the source CSV files live
-_DATASET_BASE = _ORBENCH_ROOT / "tasks" / "heurigym" / "_datasets" / "crew_pairing"
+_DATASET_BASE = _ORBENCH_ROOT / "resource" / "heurigym" / "_datasets" / "crew_pairing"
 
 # Crew-pairing constants (stored as params so C code can use them)
 MAX_DUTY_MINUTES = 14 * 60       # 840

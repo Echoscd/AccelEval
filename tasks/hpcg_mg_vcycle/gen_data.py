@@ -13,8 +13,8 @@ from framework.orbench_io_py import write_input_bin
 
 SIZES = {
     "small": {"nx": 32, "ny": 32, "nz": 32, "coarse_levels": 3},
-    "medium": {"nx": 56, "ny": 56, "nz": 56, "coarse_levels": 3},
-    "large": {"nx": 72, "ny": 72, "nz": 72, "coarse_levels": 3},
+    "large": {"nx": 96, "ny": 96, "nz": 96, "coarse_levels": 3},
+    "medium": {"nx": 72, "ny": 72, "nz": 72, "coarse_levels": 3},
 }
 
 

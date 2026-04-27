@@ -18,6 +18,7 @@ Usage:
 import os
 import sys
 import json
+from typing import Optional
 import time
 import argparse
 from datetime import datetime
@@ -60,13 +61,18 @@ def run_generate(
     max_workers: int,
     temperature: float,
     yes: bool,
+    guidance_dir: Optional[str] = None,
 ) -> list[str]:
     """
     Generate CUDA solutions for all model×task×level×sample combinations.
 
     Returns list of run_names that were generated (for subsequent eval).
     """
-    scheduler = GenerationScheduler(registry, runs_dir=os.path.join(ORBENCH_ROOT, "runs"))
+    scheduler = GenerationScheduler(
+        registry,
+        runs_dir=os.path.join(ORBENCH_ROOT, "runs"),
+        guidance_dir=guidance_dir,
+    )
     jobs = scheduler.build_jobs(model_ids, task_ids, levels, num_samples)
 
     if not jobs:
@@ -379,6 +385,11 @@ def main():
     parser.add_argument("--output-dir", default=None,
         help="Directory for combined report (default: runs/reports)")
 
+    # Strategy-transfer: per-task guidance recipes
+    parser.add_argument("--guidance-dir", default=None,
+        help="Directory of per-task recipes ({guidance_dir}/{task_id}.md); "
+             "when set, prompts are augmented and runs are suffixed _s2.")
+
     args = parser.parse_args()
 
     # Load config
@@ -421,6 +432,7 @@ def main():
             max_workers=args.workers,
             temperature=args.temperature,
             yes=args.yes,
+            guidance_dir=args.guidance_dir,
         )
         run_names = list(set(run_names + generated_runs))
 

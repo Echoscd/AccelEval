@@ -17,8 +17,8 @@ from framework.orbench_io_py import write_input_bin
 
 SIZES = {
     "small":  {"num_nodes": 20_000,  "avg_degree": 6, "seed": 11},
-    "medium": {"num_nodes": 100_000, "avg_degree": 8, "seed": 11},
-    "large":  {"num_nodes": 250_000, "avg_degree": 8, "seed": 11},
+    "large": {"num_nodes": 500_000, "avg_degree": 12, "seed": 11},
+    "medium":  {"num_nodes": 250_000, "avg_degree": 8, "seed": 11},
 }
 
 

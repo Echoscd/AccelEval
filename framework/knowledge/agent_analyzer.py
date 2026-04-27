@@ -12,6 +12,7 @@ import json
 import os
 import re
 from pathlib import Path
+from typing import Optional
 
 
 # ---------------------------------------------------------------------------
@@ -151,22 +152,57 @@ def _parse_json(text: str) -> dict:
     except json.JSONDecodeError:
         pass
 
-    # Last resort: extract arrays/strings by key
+    # Last resort: find each key's array via balanced-bracket scan
+    # (non-greedy `\[.*?\]` was unsafe — `a[i]` in nested strings matched early)
+    def _extract_array(src: str, key: str) -> Optional[list]:
+        import re as _re
+        m = _re.search(rf'"{key}"\s*:\s*\[', src)
+        if not m:
+            return None
+        i = m.end() - 1  # at '['
+        depth = 0
+        in_str = False
+        esc = False
+        while i < len(src):
+            c = src[i]
+            if esc:
+                esc = False
+            elif c == "\\" and in_str:
+                esc = True
+            elif c == '"':
+                in_str = not in_str
+            elif not in_str:
+                if c == "[":
+                    depth += 1
+                elif c == "]":
+                    depth -= 1
+                    if depth == 0:
+                        raw = src[m.end() - 1 : i + 1]
+                        try:
+                            return json.loads(raw)
+                        except json.JSONDecodeError:
+                            try:
+                                return json.loads(re.sub(r',\s*([}\]])', r'\1', raw))
+                            except json.JSONDecodeError:
+                                return None
+            i += 1
+        return None
+
     result = {}
     for key in ["pattern_summaries", "new_candidates"]:
-        m = re.search(rf'"{key}"\s*:\s*(\[.*?\])', text, re.DOTALL)
-        if m:
-            try:
-                result[key] = json.loads(m.group(1))
-            except json.JSONDecodeError:
-                result[key] = []
+        arr = _extract_array(text, key)
+        if arr is not None:
+            result[key] = arr
+        else:
+            result[key] = []
 
     for key in ["strategy_summary", "bottleneck_analysis"]:
         m = re.search(rf'"{key}"\s*:\s*"(.*?)"', text, re.DOTALL)
         if m:
             result[key] = m.group(1)
 
-    if result:
+    if any(result.get(k) for k in ["pattern_summaries", "new_candidates",
+                                     "strategy_summary", "bottleneck_analysis"]):
         return result
 
     raise ValueError(f"Cannot parse JSON from response: {text[:300]}")
@@ -185,8 +221,9 @@ def _format_auto_matched(auto_matched: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _load_sources(task_id: str, source_path: str):
-    """Load CPU reference and CUDA source."""
+def _load_sources(task_id: str, source_path: str,
+                   cpu_max: int = 8000, cuda_max: int = 24000):
+    """Load CPU reference and CUDA source (head+tail truncation if too long)."""
     _root = Path(__file__).resolve().parents[2]
     ref_path = _root / "tasks" / task_id / "cpu_reference.c"
     cpu_ref = ref_path.read_text(encoding="utf-8", errors="ignore") if ref_path.exists() else "(not found)"
@@ -194,7 +231,14 @@ def _load_sources(task_id: str, source_path: str):
     with open(source_path, "r", encoding="utf-8", errors="ignore") as f:
         cuda_code = f.read()
 
-    return cpu_ref[:6000], cuda_code[:8000]
+    def truncate(text: str, max_chars: int) -> str:
+        if len(text) <= max_chars:
+            return text
+        head = text[: max_chars * 2 // 3]
+        tail = text[-max_chars // 3 :]
+        return head + "\n\n/* …truncated… */\n\n" + tail
+
+    return truncate(cpu_ref, cpu_max), truncate(cuda_code, cuda_max)
 
 
 # ---------------------------------------------------------------------------
