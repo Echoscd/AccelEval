@@ -6,7 +6,7 @@
 # tricks (those were buggy: only the first iteration of an inner for-loop ran).
 
 set -u
-cd /root/chendong/AccelEval/AccelEval
+cd "$(dirname "$0")/.."
 
 TS=$(date +%Y%m%d_%H%M)
 export TS
