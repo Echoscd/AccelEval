@@ -1,9 +1,9 @@
-# ORBench Task Porting Guide — Extracting an Upstream Repo into the ORBench v2 Format
+# AccelEval Task Porting Guide — Extracting an Upstream Repo into the AccelEval v2 Format
 
 ## Overview
 
 Porting an existing CPU/GPU benchmark (e.g.\ FinanceBench, GROMACS) into an
-ORBench v2 task requires producing seven files. This guide consolidates
+AccelEval v2 task requires producing seven files. This guide consolidates
 lessons learnt from porting four FinanceBench tasks and the GROMACS
 `nbnxm` kernel.
 
@@ -181,7 +181,7 @@ void solution_free(void)
 ```c
 // task_io_cpu.c — <task_id> CPU I/O adapter.
 
-#include "orbench_io.h"
+#include "acceleval_io.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -250,15 +250,15 @@ extern "C" {
 
 ```python
 #!/usr/bin/env python3
-"""gen_data.py — Generate <task_name> data for ORBench."""
+"""gen_data.py — Generate <task_name> data for AccelEval."""
 
 import os, sys, subprocess, shutil, re as re_mod
 from pathlib import Path
 import numpy as np
 
-_ORBENCH_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(_ORBENCH_ROOT))
-from framework.orbench_io_py import write_input_bin
+_ACCELEVAL_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ACCELEVAL_ROOT))
+from framework.acceleval_io_py import write_input_bin
 
 SIZES = {
     "small":  {"N": 100000,   "seed": 42},
@@ -272,12 +272,12 @@ def generate_data(N, seed):
     # ... build the data ...
     return tensors_dict
 
-def compile_cpu_baseline(orbench_root: Path) -> Path:
+def compile_cpu_baseline(acceleval_root: Path) -> Path:
     """Compile the CPU reference into an executable."""
-    task_dir = orbench_root / "tasks" / "<task_id>"
+    task_dir = acceleval_root / "tasks" / "<task_id>"
     exe = task_dir / "solution_cpu"
-    cmd = ["gcc", "-O2", "-I", str(orbench_root / "framework"),
-           str(orbench_root / "framework" / "harness_cpu.c"),
+    cmd = ["gcc", "-O2", "-I", str(acceleval_root / "framework"),
+           str(acceleval_root / "framework" / "harness_cpu.c"),
            str(task_dir / "task_io_cpu.c"),
            str(task_dir / "cpu_reference.c"),
            "-o", str(exe), "-lm"]
@@ -314,7 +314,7 @@ def main():
         f.write(f"{N}\n")
 
     if with_expected:
-        exe = compile_cpu_baseline(_ORBENCH_ROOT)
+        exe = compile_cpu_baseline(_ACCELEVAL_ROOT)
         time_ms = run_cpu_time(exe, out_dir)
         with open(out_dir / "cpu_time_ms.txt", "w") as f:
             f.write(f"{time_ms:.3f}\n")
@@ -482,7 +482,7 @@ python3 run.py eval --run <run_name> --sizes small
 
 ## 6. Porting case studies
 
-| Upstream repo | ORBench task | Key challenge |
+| Upstream repo | AccelEval task | Key challenge |
 |---|---|---|
 | FinanceBench / Black-Scholes | `black_scholes` | Polynomial `erf` → `erff()` intrinsic on GPU |
 | FinanceBench / Monte-Carlo | `monte_carlo` | `rand()` → `xorshift32` deterministic RNG |

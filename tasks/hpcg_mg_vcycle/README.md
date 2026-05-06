@@ -34,7 +34,7 @@ Tensors:
 ## Output
 - `x` (`float64[n]`): fine-grid solution after one multigrid V-cycle
 
-## ORBench adaptation note
+## AccelEval adaptation note
 This task keeps the official HPCG 27-point structured matrix pattern on the finest
 level and reconstructs the coarse levels geometrically during initialization. The
 reference CPU implementation performs one presmoothing SYMGS sweep, injection-based

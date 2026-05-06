@@ -19,7 +19,7 @@ static int i_min(int a, int b) {
     return (a <= b) ? a : b;
 }
 
-static void _orbench_old_init(int rows, int cols, const int* wall) {
+static void _acceleval_old_init(int rows, int cols, const int* wall) {
     g_rows = rows;
     g_cols = cols;
     g_wall = wall;
@@ -30,7 +30,7 @@ static void _orbench_old_init(int rows, int cols, const int* wall) {
     g_next = (int*)malloc((size_t)cols * sizeof(int));
 }
 
-static void _orbench_old_compute(int* out_costs) {
+static void _acceleval_old_compute(int* out_costs) {
     if (!g_wall || !g_prev || !g_next || g_rows <= 0 || g_cols <= 0 || !out_costs) {
         return;
     }
@@ -73,6 +73,6 @@ static void _orbench_old_compute(int* out_costs) {
 
 // ── Unified compute_only wrapper (auto-migrated) ──
 void solution_compute(int rows, int cols, const int* wall, int* out_costs) {
-    _orbench_old_init(rows, cols, wall);
-    _orbench_old_compute(out_costs);
+    _acceleval_old_init(rows, cols, wall);
+    _acceleval_old_compute(out_costs);
 }

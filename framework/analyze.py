@@ -7,7 +7,7 @@ import json
 import argparse
 from collections import defaultdict
 
-from .task import load_task, load_all_tasks, ORBENCH_ROOT
+from .task import load_task, load_all_tasks, ACCELEVAL_ROOT
 
 
 def load_eval_results(run_name: str) -> dict:
@@ -18,7 +18,7 @@ def load_eval_results(run_name: str) -> dict:
       1) Latest timestamped file: eval_results_*.json
       2) Legacy file: eval_results.json
     """
-    run_dir = os.path.join(ORBENCH_ROOT, "runs", run_name)
+    run_dir = os.path.join(ACCELEVAL_ROOT, "runs", run_name)
     if not os.path.isdir(run_dir):
         raise FileNotFoundError(f"Run directory not found: {run_dir}")
 
@@ -160,7 +160,7 @@ def print_summary(summary: dict):
     overall = summary["overall"]
 
     print(f"\n{'='*70}")
-    print(f"  ORBench Evaluation Summary")
+    print(f"  AccelEval Evaluation Summary")
     print(f"{'='*70}")
     print(f"  Tasks: {overall['total_tasks']}  |  Samples: {overall['total_samples']}")
     print(f"  Compile rate: {overall['compile_rate']:.1%}")
@@ -198,7 +198,7 @@ def print_summary(summary: dict):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Analyze ORBench results")
+    parser = argparse.ArgumentParser(description="Analyze AccelEval results")
     parser.add_argument("--run", required=True, help="Run name")
     parser.add_argument("--output", default=None, help="Save summary JSON to file")
     args = parser.parse_args()

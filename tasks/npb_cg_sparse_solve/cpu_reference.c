@@ -36,7 +36,7 @@ static void csr_spmv(int n, const int *row_ptr, const int *col_idx,
     }
 }
 
-static void _orbench_old_init(int n, int nnz, int max_iters, int tol_exp,
+static void _acceleval_old_init(int n, int nnz, int max_iters, int tol_exp,
                    const int *row_ptr, const int *col_idx,
                    const double *values, const double *b) {
     g_ctx.n = n;
@@ -52,7 +52,7 @@ static void _orbench_old_init(int n, int nnz, int max_iters, int tol_exp,
     g_ctx.Ap = (double*)malloc((size_t)n * sizeof(double));
 }
 
-static void _orbench_old_compute(double *x_out) {
+static void _acceleval_old_compute(double *x_out) {
     const int n = g_ctx.n;
     const int *row_ptr = g_ctx.row_ptr;
     const int *col_idx = g_ctx.col_idx;
@@ -92,6 +92,6 @@ static void _orbench_old_compute(double *x_out) {
 
 // ── Unified compute_only wrapper (auto-migrated) ──
 void solution_compute(int n, int nnz, int max_iters, int tol_exp, const int * row_ptr, const int * col_idx, const double * values, const double * b, double * x_out) {
-    _orbench_old_init(n, nnz, max_iters, tol_exp, row_ptr, col_idx, values, b);
-    _orbench_old_compute(x_out);
+    _acceleval_old_init(n, nnz, max_iters, tol_exp, row_ptr, col_idx, values, b);
+    _acceleval_old_compute(x_out);
 }

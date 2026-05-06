@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-gen_data.py (ORBench v2) - Generate input.bin + expected_output.txt for crew_pairing
+gen_data.py (AccelEval v2) - Generate input.bin + expected_output.txt for crew_pairing
 
 Reads airline crew-pairing CSV files (from heurigym dataset) and converts them
-to the ORBench binary format.
+to the AccelEval binary format.
 
 Usage:
   python3 gen_data.py <size_name> <output_dir> [--with-expected]
@@ -19,10 +19,10 @@ from datetime import datetime
 
 import numpy as np
 
-_ORBENCH_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(_ORBENCH_ROOT))
+_ACCELEVAL_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ACCELEVAL_ROOT))
 
-from framework.orbench_io_py import write_input_bin
+from framework.acceleval_io_py import write_input_bin
 
 # ---------------------------------------------------------------------------
 # Size definitions: each maps to a CSV file from the heurigym dataset
@@ -34,7 +34,7 @@ SIZES = {
 }
 
 # Where the source CSV files live
-_DATASET_BASE = _ORBENCH_ROOT / "resource" / "heurigym" / "_datasets" / "crew_pairing"
+_DATASET_BASE = _ACCELEVAL_ROOT / "resource" / "heurigym" / "_datasets" / "crew_pairing"
 
 # Crew-pairing constants (stored as params so C code can use them)
 MAX_DUTY_MINUTES = 14 * 60       # 840
@@ -124,12 +124,12 @@ def parse_csv(csv_path: Path):
             duty_rate, pairing_rate, all_stations, base_id, tokens)
 
 
-def compile_cpu_baseline(orbench_root: Path) -> Path:
+def compile_cpu_baseline(acceleval_root: Path) -> Path:
     """Compile the crew_pairing CPU reference."""
-    exe = orbench_root / "tasks" / "crew_pairing" / "solution_cpu"
-    src = orbench_root / "tasks" / "crew_pairing" / "cpu_reference.c"
-    task_io_cpu = orbench_root / "tasks" / "crew_pairing" / "task_io_cpu.c"
-    harness = orbench_root / "framework" / "harness_cpu.c"
+    exe = acceleval_root / "tasks" / "crew_pairing" / "solution_cpu"
+    src = acceleval_root / "tasks" / "crew_pairing" / "cpu_reference.c"
+    task_io_cpu = acceleval_root / "tasks" / "crew_pairing" / "task_io_cpu.c"
+    harness = acceleval_root / "framework" / "harness_cpu.c"
 
     sources = [src, task_io_cpu, harness]
     if exe.exists():
@@ -142,7 +142,7 @@ def compile_cpu_baseline(orbench_root: Path) -> Path:
 
     cmd = [
         "gcc", "-O2",
-        "-I", str(orbench_root / "framework"),
+        "-I", str(acceleval_root / "framework"),
         str(harness),
         str(task_io_cpu),
         str(src),
@@ -252,7 +252,7 @@ def main():
         f.write("solve\n")
 
     if with_expected:
-        exe = compile_cpu_baseline(_ORBENCH_ROOT)
+        exe = compile_cpu_baseline(_ACCELEVAL_ROOT)
         time_ms = run_cpu_time(exe, out_dir)
         with open(out_dir / "cpu_time_ms.txt", "w") as f:
             f.write(f"{time_ms:.3f}\n")

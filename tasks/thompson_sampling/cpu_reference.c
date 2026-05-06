@@ -3,7 +3,7 @@
 // Monte Carlo simulation of Thompson Sampling for Bernoulli bandits.
 // NO file I/O. All I/O handled by task_io_cpu.c.
 //
-// Build: gcc -O2 -DORBENCH_COMPUTE_ONLY -I framework/
+// Build: gcc -O2 -DACCELEVAL_COMPUTE_ONLY -I framework/
 //        framework/harness_cpu.c tasks/thompson_sampling/task_io_cpu.c
 //        tasks/thompson_sampling/cpu_reference.c -o solution_cpu -lm
 

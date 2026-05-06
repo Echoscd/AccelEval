@@ -5,7 +5,7 @@
 //
 // Key changes from original:
 //   - Uses xorshift32 RNG instead of curand for determinism (matches cpu_reference.c)
-//   - Uses ORBench solution_init/solution_compute/solution_free interface
+//   - Uses AccelEval solution_init/solution_compute/solution_free interface
 //   - Persistent GPU memory allocation
 
 #include <cuda_runtime.h>

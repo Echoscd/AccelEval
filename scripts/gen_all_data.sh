@@ -38,7 +38,7 @@ if [[ ${#FILTER_SIZES[@]} -gt 0 ]]; then
     SIZES=("${FILTER_SIZES[@]}")
 fi
 
-echo "=== ORBench Batch Data Generation ==="
+echo "=== AccelEval Batch Data Generation ==="
 echo "  Sizes: ${SIZES[*]}"
 echo "  Parallel: $MAX_PARALLEL"
 echo ""

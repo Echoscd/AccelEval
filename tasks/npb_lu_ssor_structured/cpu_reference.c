@@ -133,7 +133,7 @@ static void compute_residual_norms(const double *u, double out[5]) {
     for (int m = 0; m < NVARS; ++m) out[m] = sqrt(sums[m] / denom);
 }
 
-static void _orbench_old_init(int n, int iters, int omega_milli, const double *u0, const double *rhs) {
+static void _acceleval_old_init(int n, int iters, int omega_milli, const double *u0, const double *rhs) {
     g_n = n;
     g_iters = iters;
     g_omega = ((double)omega_milli) / 1000.0;
@@ -151,7 +151,7 @@ static void _orbench_old_init(int n, int iters, int omega_milli, const double *u
     memcpy(g_rhs, rhs, g_count * sizeof(double));
 }
 
-static void _orbench_old_compute(double *residual_out) {
+static void _acceleval_old_compute(double *residual_out) {
     double *u = (double*)malloc(g_count * sizeof(double));
     if (!u) {
         fprintf(stderr, "[cpu_reference] OOM in solution_compute\n");
@@ -177,6 +177,6 @@ static void _orbench_old_compute(double *residual_out) {
 
 // ── Unified compute_only wrapper (auto-migrated) ──
 void solution_compute(int n, int iters, int omega_milli, const double * u0, const double * rhs, double * residual_out) {
-    _orbench_old_init(n, iters, omega_milli, u0, rhs);
-    _orbench_old_compute(residual_out);
+    _acceleval_old_init(n, iters, omega_milli, u0, rhs);
+    _acceleval_old_compute(residual_out);
 }

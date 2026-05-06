@@ -16,8 +16,8 @@ This task is adapted from the real GitHub benchmark source:
 - Benchmark: `openmp/hotspot/hotspot_openmp.cpp`
 - Suite: Rodinia Benchmark Suite (University of Virginia)
 
-The ORBench version keeps the same physical constants, the same transient update equations,
-and the same edge/corner boundary handling, while converting the benchmark to ORBench input/output format.
+The AccelEval version keeps the same physical constants, the same transient update equations,
+and the same edge/corner boundary handling, while converting the benchmark to AccelEval input/output format.
 
 ## Why It Fits GPU Acceleration
 
@@ -30,7 +30,7 @@ The main bottlenecks are repeated global-memory traffic and boundary-condition h
 
 ## Input Format
 
-Binary file `input.bin` (ORBench v2 format):
+Binary file `input.bin` (AccelEval v2 format):
 
 | Tensor | Type | Shape | Description |
 |---|---|---:|---|
@@ -61,7 +61,7 @@ Format: "%.6e\n" per line
 | medium | 768 | 768 | 100 |
 | large | 1536 | 1536 | 150 |
 
-## Notes for ORBench Integration
+## Notes for AccelEval Integration
 
 - Recommended interface mode: `init_compute`
 - Correctness check: floating-point numerical comparison

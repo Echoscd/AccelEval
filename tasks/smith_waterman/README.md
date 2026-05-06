@@ -18,13 +18,13 @@ H[i][j] = max(
 
 The answer for one pair is `max(H[i][j])` over the whole table.
 
-## Why This Is a Good ORBench Task
+## Why This Is a Good AccelEval Task
 
 1. **Inter-pair parallelism**: each sequence pair is independent.
 2. **Wavefront parallelism**: cells on the same anti-diagonal are independent.
 3. **Arithmetic intensity**: the DP update is simple and regular, with substantial total work.
 4. **Batched setting**: thousands of sequence pairs can be processed together.
-5. **Exact verification**: each pair outputs one integer score, which fits ORBench's validator well.
+5. **Exact verification**: each pair outputs one integer score, which fits AccelEval's validator well.
 
 ## Algorithm Source
 
@@ -32,9 +32,9 @@ The answer for one pair is `max(H[i][j])` over the whole table.
 - Durbin et al., *Biological Sequence Analysis* (1998)
 - Commonly used in bioinformatics pipelines, sequence database search, and variant-analysis workflows
 
-## Current ORBench Packaging
+## Current AccelEval Packaging
 
-This task is packaged as a **`compute_only`** ORBench task. The full task directory contains:
+This task is packaged as a **`compute_only`** AccelEval task. The full task directory contains:
 
 ```text
 tasks/smith_waterman/
@@ -53,7 +53,7 @@ tasks/smith_waterman/
 
 ## Input Format
 
-The task uses ORBench `input.bin` with the following tensors:
+The task uses AccelEval `input.bin` with the following tensors:
 
 | Tensor | Type | Shape | Description |
 |---|---|---:|---|

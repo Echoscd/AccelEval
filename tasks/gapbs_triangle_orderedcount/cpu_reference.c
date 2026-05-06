@@ -6,13 +6,13 @@ static int g_n = 0;
 static const int *g_row_ptr = NULL;
 static const int *g_col_idx = NULL;
 
-static void _orbench_old_init(int n, const int *row_ptr, const int *col_idx) {
+static void _acceleval_old_init(int n, const int *row_ptr, const int *col_idx) {
     g_n = n;
     g_row_ptr = row_ptr;
     g_col_idx = col_idx;
 }
 
-static void _orbench_old_compute(unsigned long long *triangle_count_out) {
+static void _acceleval_old_compute(unsigned long long *triangle_count_out) {
     uint64_t total = 0;
     if (!triangle_count_out || g_n <= 0 || !g_row_ptr || !g_col_idx) {
         return;
@@ -48,6 +48,6 @@ static void _orbench_old_compute(unsigned long long *triangle_count_out) {
 
 // ── Unified compute_only wrapper (auto-migrated) ──
 void solution_compute(int n, const int * row_ptr, const int * col_idx, unsigned long long * triangle_count_out) {
-    _orbench_old_init(n, row_ptr, col_idx);
-    _orbench_old_compute(triangle_count_out);
+    _acceleval_old_init(n, row_ptr, col_idx);
+    _acceleval_old_compute(triangle_count_out);
 }

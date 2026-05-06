@@ -97,7 +97,7 @@ static void kernel_hausdorffCpu(int             num_points,
 
 // ===== Public interface =====
 
-static void _orbench_old_init(int           num_points,
+static void _acceleval_old_init(int           num_points,
                    int           num_spaces,
                    const float*  points_xy,      // [num_points * 2], x0,y0,x1,y1,...
                    const int*    space_offsets)
@@ -108,7 +108,7 @@ static void _orbench_old_init(int           num_points,
     g_space_offsets = space_offsets;
 }
 
-static void _orbench_old_compute(int    num_points,
+static void _acceleval_old_compute(int    num_points,
                       int    num_spaces,
                       float* results)              // [num_spaces * num_spaces]
 {
@@ -118,6 +118,6 @@ static void _orbench_old_compute(int    num_points,
 
 // ── Unified compute_only wrapper (auto-migrated) ──
 void solution_compute(int num_points, int num_spaces, const float* points_xy, const int* space_offsets, float* results) {
-    _orbench_old_init(num_points, num_spaces, points_xy, space_offsets);
-    _orbench_old_compute(num_points, num_spaces, results);
+    _acceleval_old_init(num_points, num_spaces, points_xy, space_offsets);
+    _acceleval_old_compute(num_points, num_spaces, results);
 }

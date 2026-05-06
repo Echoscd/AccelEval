@@ -8,7 +8,7 @@ import subprocess
 import shutil
 from dataclasses import dataclass
 
-from .task import load_task, ORBENCH_ROOT, TASKS_DIR
+from .task import load_task, ACCELEVAL_ROOT, TASKS_DIR
 from .config import get_config
 
 
@@ -36,8 +36,8 @@ _SOLUTION_PREFIX = """\
 #ifdef __cplusplus
 extern "C" {
 #endif
-#ifndef ORBENCH_SOLUTION_FREE_DECLARED
-#define ORBENCH_SOLUTION_FREE_DECLARED
+#ifndef ACCELEVAL_SOLUTION_FREE_DECLARED
+#define ACCELEVAL_SOLUTION_FREE_DECLARED
 void solution_free(void);
 #endif
 #ifdef __cplusplus
@@ -78,12 +78,12 @@ def compile_solution(
     # Read original solution, prepend auto-fix prefix (idempotent via header guard)
     with open(solution_path, "r") as f:
         orig_src = f.read()
-    patched_src = orig_src if "ORBENCH_SOLUTION_FREE_DECLARED" in orig_src else _SOLUTION_PREFIX + orig_src
+    patched_src = orig_src if "ACCELEVAL_SOLUTION_FREE_DECLARED" in orig_src else _SOLUTION_PREFIX + orig_src
 
     if build_dir is None:
         # Hash the patched source so auto-fix changes invalidate the cache.
         content_hash = str(abs(hash(patched_src)))[:12]
-        build_dir = os.path.join(ORBENCH_ROOT, "cache", task_id, content_hash)
+        build_dir = os.path.join(ACCELEVAL_ROOT, "cache", task_id, content_hash)
 
     os.makedirs(build_dir, exist_ok=True)
 
@@ -94,10 +94,10 @@ def compile_solution(
 
     exe_path = os.path.join(build_dir, "solution_gpu")
 
-    # ORBench v2.1 compilation: harness_gpu.cu + task_io.cu + solution.cu
-    harness_path = os.path.join(ORBENCH_ROOT, "framework", "harness_gpu.cu")
+    # AccelEval v2.1 compilation: harness_gpu.cu + task_io.cu + solution.cu
+    harness_path = os.path.join(ACCELEVAL_ROOT, "framework", "harness_gpu.cu")
     task_io_path = os.path.join(TASKS_DIR, task_id, "task_io.cu")
-    include_dir = os.path.join(ORBENCH_ROOT, "framework")
+    include_dir = os.path.join(ACCELEVAL_ROOT, "framework")
     cmd = [
         "nvcc", "-O2", f"-arch={arch}",
         "-I", include_dir,
@@ -184,9 +184,9 @@ def batch_compile(
 def cleanup_build_dir(task_id: str, content_hash: str = None):
     """Remove cached build artifacts"""
     if content_hash:
-        build_dir = os.path.join(ORBENCH_ROOT, "cache", task_id, content_hash)
+        build_dir = os.path.join(ACCELEVAL_ROOT, "cache", task_id, content_hash)
     else:
-        build_dir = os.path.join(ORBENCH_ROOT, "cache", task_id)
+        build_dir = os.path.join(ACCELEVAL_ROOT, "cache", task_id)
 
     if os.path.exists(build_dir):
         shutil.rmtree(build_dir, ignore_errors=True)

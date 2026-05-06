@@ -233,7 +233,7 @@ static float shfl_FullDTW_1023_cpu(const float* query, const float* subject)
 
 // ===== Public interface =====
 
-static void _orbench_old_init(int          num_entries,
+static void _acceleval_old_init(int          num_entries,
                    int          num_features,
                    const float* subjects,
                    const float* query)
@@ -244,7 +244,7 @@ static void _orbench_old_init(int          num_entries,
     g_query        = query;
 }
 
-static void _orbench_old_compute(int    num_entries,
+static void _acceleval_old_compute(int    num_entries,
                       int    num_features,
                       float* distances)
 {
@@ -257,6 +257,6 @@ static void _orbench_old_compute(int    num_entries,
 
 // ── Unified compute_only wrapper (auto-migrated) ──
 void solution_compute(int num_entries, int num_features, const float* subjects, const float* query, float* distances) {
-    _orbench_old_init(num_entries, num_features, subjects, query);
-    _orbench_old_compute(num_entries, num_features, distances);
+    _acceleval_old_init(num_entries, num_features, subjects, query);
+    _acceleval_old_compute(num_entries, num_features, distances);
 }

@@ -1,6 +1,6 @@
 task: npb_lu_ssor_structured
 summary: >
-  Implement a GPU solution for a structured-grid SSOR benchmark adapted from the
+  Implement a GPU solution for a structured-grid SSAccelEvalmark adapted from the
   NPB LU benchmark family. The task performs repeated forward and backward
   lexicographic block sweeps over a 3D grid with 5 coupled unknowns per point,
   followed by componentwise residual norm computation.

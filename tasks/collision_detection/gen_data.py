@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-gen_data.py (ORBench v2) - Generate 2D convex polygon collision detection scenes.
+gen_data.py (AccelEval v2) - Generate 2D convex polygon collision detection scenes.
 
 Generates clustered convex polygons, precomputes AABBs, and computes expected
 collision counts via grid broad phase + SAT narrow phase.
@@ -18,10 +18,10 @@ from pathlib import Path
 
 import numpy as np
 
-_ORBENCH_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(_ORBENCH_ROOT))
+_ACCELEVAL_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ACCELEVAL_ROOT))
 
-from framework.orbench_io_py import write_input_bin
+from framework.acceleval_io_py import write_input_bin
 
 SIZES = {
     "small":  {"N": 1000,  "num_clusters": 10,  "cluster_radius": 8.0,
@@ -179,11 +179,11 @@ def compute_collisions_python(N, poly_offsets, vertices_x, vertices_y, aabb,
 # CPU baseline compile/run
 # ---------------------------------------------------------------------------
 
-def compile_cpu_baseline(orbench_root: Path) -> Path:
-    exe = orbench_root / "tasks" / "collision_detection" / "solution_cpu"
-    src = orbench_root / "tasks" / "collision_detection" / "cpu_reference.c"
-    task_io_cpu = orbench_root / "tasks" / "collision_detection" / "task_io_cpu.c"
-    harness = orbench_root / "framework" / "harness_cpu.c"
+def compile_cpu_baseline(acceleval_root: Path) -> Path:
+    exe = acceleval_root / "tasks" / "collision_detection" / "solution_cpu"
+    src = acceleval_root / "tasks" / "collision_detection" / "cpu_reference.c"
+    task_io_cpu = acceleval_root / "tasks" / "collision_detection" / "task_io_cpu.c"
+    harness = acceleval_root / "framework" / "harness_cpu.c"
 
     sources = [src, task_io_cpu, harness]
     if exe.exists():
@@ -196,7 +196,7 @@ def compile_cpu_baseline(orbench_root: Path) -> Path:
 
     cmd = [
         "gcc", "-O2",
-        "-I", str(orbench_root / "framework"),
+        "-I", str(acceleval_root / "framework"),
         str(harness), str(task_io_cpu), str(src),
         "-o", str(exe), "-lm",
     ]
@@ -267,7 +267,7 @@ def main():
     ))
     cell_size = max(avg_diameter * 2.0, 1.0)
 
-    # Store as x100 int (no float params in orbench)
+    # Store as x100 int (no float params in acceleval)
     world_size_x100 = int(round(world_size * 100))
     cell_size_x100 = int(round(cell_size * 100))
 
@@ -296,7 +296,7 @@ def main():
         f.write("solve\n")
 
     if with_expected:
-        exe = compile_cpu_baseline(_ORBENCH_ROOT)
+        exe = compile_cpu_baseline(_ACCELEVAL_ROOT)
         time_ms = run_cpu_time(exe, out_dir)
         with open(out_dir / "cpu_time_ms.txt", "w") as f:
             f.write(f"{time_ms:.3f}\n")

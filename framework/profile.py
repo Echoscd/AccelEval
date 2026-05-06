@@ -83,7 +83,7 @@ def run_nsys_profile(
         return None
 
     if output_dir is None:
-        output_dir = tempfile.mkdtemp(prefix="orbench_nsys_")
+        output_dir = tempfile.mkdtemp(prefix="acceleval_nsys_")
 
     report_base = os.path.join(output_dir, "profile")
 
@@ -352,7 +352,7 @@ def write_nsys_full_summary(analysis: dict, output_path: str):
         gpu = analysis.get("gpu_trace", {})
 
         f.write("=" * 70 + "\n")
-        f.write("  ORBench nsys Profiling Summary\n")
+        f.write("  AccelEval nsys Profiling Summary\n")
         f.write("=" * 70 + "\n\n")
 
         # --- Overall ---

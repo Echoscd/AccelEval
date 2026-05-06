@@ -12,15 +12,15 @@ current frontier, next frontier, and visited.
 
 ## Algorithm Source
 
-This ORBench task is based on the real Rodinia BFS code structure:
+This AccelEval task is based on the real Rodinia BFS code structure:
 - Rodinia benchmark suite repository (`yuhc/gpu-rodinia` / mirror `THU-DSP-LAB/gpu-rodinia`)
 - BFS benchmark listed under OpenMP benchmarks in the Rodinia suite
 - The BFS kernel structure is also visible in the historical Rodinia/OpenACC BFS file discussed on
   NVIDIA Developer Forums, which shows the same `Node { starting, no_of_edges }` representation and
   frontier-mask update pattern.
 
-The ORBench version keeps the same graph representation idea and the same level-synchronous mask-based
-BFS logic, while converting input/output into ORBench binary format.
+The AccelEval version keeps the same graph representation idea and the same level-synchronous mask-based
+BFS logic, while converting input/output into AccelEval binary format.
 
 ## Why It Fits GPU Acceleration
 
@@ -33,7 +33,7 @@ The main bottlenecks are irregular memory access to the edge list and load imbal
 
 ## Input Format
 
-Binary file `input.bin` (ORBench v2 format):
+Binary file `input.bin` (AccelEval v2 format):
 
 | Tensor | Type | Shape | Description |
 |---|---|---:|---|
@@ -67,7 +67,7 @@ Unreachable nodes are reported as `-1`.
 | medium | 100,000 | 8 |
 | large | 250,000 | 8 |
 
-## Notes for ORBench Integration
+## Notes for AccelEval Integration
 
 - Recommended interface mode: `init_compute`
 - Correctness check: exact integer comparison

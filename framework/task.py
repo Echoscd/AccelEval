@@ -8,8 +8,8 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 
-ORBENCH_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TASKS_DIR = os.path.join(ORBENCH_ROOT, "tasks")
+ACCELEVAL_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TASKS_DIR = os.path.join(ACCELEVAL_ROOT, "tasks")
 
 
 @dataclass
@@ -135,7 +135,7 @@ def load_prompt(
 
 
 def load_cpu_reference(task_id: str) -> str:
-    """Load the CPU reference source code (ORBench v2 uses cpu_reference.c)"""
+    """Load the CPU reference source code (AccelEval v2 uses cpu_reference.c)"""
     task_dir = get_task_dir(task_id)
     ref_path = os.path.join(task_dir, "cpu_reference.c")
 

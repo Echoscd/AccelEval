@@ -1,4 +1,4 @@
-// harness_gpu.cu - ORBench v2 GPU harness (CUDA Events timing)
+// harness_gpu.cu - AccelEval v2 GPU harness (CUDA Events timing)
 
 #include <cuda_runtime.h>
 

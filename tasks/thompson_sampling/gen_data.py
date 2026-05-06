@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-gen_data.py (ORBench v2) - Generate Thompson Sampling MC instances.
+gen_data.py (AccelEval v2) - Generate Thompson Sampling MC instances.
 
 Generates Bernoulli bandit arm means and computes expected output via CPU simulation.
 
@@ -17,10 +17,10 @@ from pathlib import Path
 
 import numpy as np
 
-_ORBENCH_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(_ORBENCH_ROOT))
+_ACCELEVAL_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ACCELEVAL_ROOT))
 
-from framework.orbench_io_py import write_input_bin
+from framework.acceleval_io_py import write_input_bin
 
 
 SIZES = {
@@ -47,11 +47,11 @@ def generate_arm_means(N, seed):
 # CPU baseline compile/run
 # ---------------------------------------------------------------------------
 
-def compile_cpu_baseline(orbench_root: Path) -> Path:
-    exe = orbench_root / "tasks" / "thompson_sampling" / "solution_cpu"
-    src = orbench_root / "tasks" / "thompson_sampling" / "cpu_reference.c"
-    task_io_cpu = orbench_root / "tasks" / "thompson_sampling" / "task_io_cpu.c"
-    harness = orbench_root / "framework" / "harness_cpu.c"
+def compile_cpu_baseline(acceleval_root: Path) -> Path:
+    exe = acceleval_root / "tasks" / "thompson_sampling" / "solution_cpu"
+    src = acceleval_root / "tasks" / "thompson_sampling" / "cpu_reference.c"
+    task_io_cpu = acceleval_root / "tasks" / "thompson_sampling" / "task_io_cpu.c"
+    harness = acceleval_root / "framework" / "harness_cpu.c"
 
     sources = [src, task_io_cpu, harness]
     if exe.exists():
@@ -63,8 +63,8 @@ def compile_cpu_baseline(orbench_root: Path) -> Path:
             pass
 
     cmd = [
-        "gcc", "-O2", "-DORBENCH_COMPUTE_ONLY",
-        "-I", str(orbench_root / "framework"),
+        "gcc", "-O2", "-DACCELEVAL_COMPUTE_ONLY",
+        "-I", str(acceleval_root / "framework"),
         str(harness), str(task_io_cpu), str(src),
         "-o", str(exe), "-lm",
     ]
@@ -144,7 +144,7 @@ def main():
     )
 
     if with_expected:
-        exe = compile_cpu_baseline(_ORBENCH_ROOT)
+        exe = compile_cpu_baseline(_ACCELEVAL_ROOT)
         # Estimate timeout: ~60ns per Beta sample (N * T * M total)
         est_timeout = max(120, int(N * T * M * 6e-8))
         print(f"[gen_data] Running CPU baseline (timeout={est_timeout}s)...")

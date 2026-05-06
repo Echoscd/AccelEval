@@ -1,4 +1,4 @@
-// harness_common.h - ORBench v2.1 request-based benchmark harness skeleton (C-only)
+// harness_common.h - AccelEval v2.1 request-based benchmark harness skeleton (C-only)
 //
 // Included by both framework/harness_gpu.cu and framework/harness_cpu.c
 // so this file MUST be valid C (not C++).
@@ -8,14 +8,14 @@
 //     → task_io (task-specific I/O adapter, provided per task)
 //       → solution (LLM-written, pure computation, no I/O)
 
-#ifndef ORBENCH_HARNESS_COMMON_H
-#define ORBENCH_HARNESS_COMMON_H
+#ifndef ACCELEVAL_HARNESS_COMMON_H
+#define ACCELEVAL_HARNESS_COMMON_H
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "orbench_io.h"
+#include "acceleval_io.h"
 
 // Implemented by task_io layer (task_io.cu / task_io_cpu.c)
 // Framework-agnostic: harness knows nothing about task-specific data
@@ -124,4 +124,4 @@ static int harness_main(int argc, char** argv) {
     return 0;
 }
 
-#endif // ORBENCH_HARNESS_COMMON_H
+#endif // ACCELEVAL_HARNESS_COMMON_H

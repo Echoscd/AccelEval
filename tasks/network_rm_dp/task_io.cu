@@ -4,10 +4,10 @@
 // task_run calls solution_compute with all parameters (no solution_init).
 // The entire computation (including cudaMalloc, H2D, kernels, D2H) is timed.
 //
-// Build: nvcc -O2 -DORBENCH_COMPUTE_ONLY -arch=sm_89 -I framework/
+// Build: nvcc -O2 -DACCELEVAL_COMPUTE_ONLY -arch=sm_89 -I framework/
 //        framework/harness_gpu.cu tasks/network_rm_dp/task_io.cu solution.cu -o solution_gpu
 
-#include "orbench_io.h"
+#include "acceleval_io.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

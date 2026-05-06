@@ -18,11 +18,11 @@ import os
 import sys
 from pathlib import Path
 
-_ORBENCH_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(_ORBENCH_ROOT))
+_ACCELEVAL_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ACCELEVAL_ROOT))
 
 # Load .env for API keys
-_env_path = _ORBENCH_ROOT / ".env"
+_env_path = _ACCELEVAL_ROOT / ".env"
 if _env_path.exists():
     with open(_env_path) as f:
         for line in f:
@@ -69,7 +69,7 @@ def cmd_status(args):
 def cmd_seed(args):
     """Load seed patterns from seed_knowledge_base.json."""
     kb = KnowledgeBase()
-    seed_path = _ORBENCH_ROOT / "Library" / "seed_knowledge_base.json"
+    seed_path = _ACCELEVAL_ROOT / "Library" / "seed_knowledge_base.json"
     if not seed_path.exists():
         print(f"ERROR: Seed file not found: {seed_path}")
         sys.exit(1)
@@ -83,7 +83,7 @@ def cmd_analyze_run(args):
 
     run_dir = args.run_dir
     if not os.path.isabs(run_dir):
-        run_dir = str(_ORBENCH_ROOT / "runs" / run_dir)
+        run_dir = str(_ACCELEVAL_ROOT / "runs" / run_dir)
 
     if not os.path.isdir(run_dir):
         print(f"ERROR: Run directory not found: {run_dir}")
@@ -114,7 +114,7 @@ def cmd_diff_analyze(args):
 
     run_dir = args.run_dir
     if not os.path.isabs(run_dir):
-        run_dir = str(_ORBENCH_ROOT / "runs" / run_dir)
+        run_dir = str(_ACCELEVAL_ROOT / "runs" / run_dir)
 
     kb_analysis = os.path.join(run_dir, "kb_analysis.json")
     if not os.path.exists(kb_analysis):
@@ -147,12 +147,12 @@ def cmd_breakdown(args):
     diffs_path = args.diffs
     if not os.path.isabs(diffs_path):
         # Try run_dir relative path
-        candidate = _ORBENCH_ROOT / "runs" / diffs_path
+        candidate = _ACCELEVAL_ROOT / "runs" / diffs_path
         if candidate.exists():
             diffs_path = str(candidate)
         else:
             # Try Library/knowledge_data/diffs/
-            candidate2 = _ORBENCH_ROOT / "Library" / "knowledge_data" / "diffs" / diffs_path
+            candidate2 = _ACCELEVAL_ROOT / "Library" / "knowledge_data" / "diffs" / diffs_path
             if candidate2.exists():
                 diffs_path = str(candidate2)
 
@@ -178,7 +178,7 @@ def cmd_diff_direct(args):
 
     run_dir = args.run_dir
     if not os.path.isabs(run_dir):
-        run_dir = str(_ORBENCH_ROOT / "runs" / run_dir)
+        run_dir = str(_ACCELEVAL_ROOT / "runs" / run_dir)
 
     if not os.path.isdir(run_dir):
         print(f"ERROR: Run directory not found: {run_dir}")
@@ -204,7 +204,7 @@ def cmd_diff_direct(args):
 
 def cmd_diff_status(args):
     """Show summary of all collected diffs."""
-    diffs_dir = _ORBENCH_ROOT / "Library" / "knowledge_data" / "diffs"
+    diffs_dir = _ACCELEVAL_ROOT / "Library" / "knowledge_data" / "diffs"
     if not diffs_dir.exists():
         print("No diffs collected yet.")
         return
@@ -259,14 +259,14 @@ def cmd_export(args):
             "models_seen_in": list(set(e.model_id for e in p.evidence)),
         })
 
-    out_path = args.output or str(_ORBENCH_ROOT / "Library" / "knowledge_export.json")
+    out_path = args.output or str(_ACCELEVAL_ROOT / "Library" / "knowledge_export.json")
     with open(out_path, "w") as f:
         json.dump(output, f, indent=2, ensure_ascii=False)
     print(f"Exported to {out_path}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="ORBench Knowledge Base CLI")
+    parser = argparse.ArgumentParser(description="AccelEval Knowledge Base CLI")
     sub = parser.add_subparsers(dest="command")
 
     sub.add_parser("status", help="Show KB status")

@@ -11,9 +11,9 @@ from pathlib import Path
 
 import numpy as np
 
-_ORBENCH_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(_ORBENCH_ROOT))
-from framework.orbench_io_py import write_input_bin
+_ACCELEVAL_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ACCELEVAL_ROOT))
+from framework.acceleval_io_py import write_input_bin
 
 SIZES = {
     "small":  {"num_nodes": 20_000,  "avg_degree": 6, "seed": 11},
@@ -109,12 +109,12 @@ def bfs_reference(node_start: np.ndarray, node_degree: np.ndarray, edge_dst: np.
     return dist
 
 
-def compile_cpu_baseline(orbench_root: Path) -> Path:
-    task_dir = orbench_root / "tasks" / "rodinia_bfs_levels"
+def compile_cpu_baseline(acceleval_root: Path) -> Path:
+    task_dir = acceleval_root / "tasks" / "rodinia_bfs_levels"
     exe = task_dir / "solution_cpu"
     src = task_dir / "cpu_reference.c"
     task_io_cpu = task_dir / "task_io_cpu.c"
-    harness = orbench_root / "framework" / "harness_cpu.c"
+    harness = acceleval_root / "framework" / "harness_cpu.c"
     sources = [src, task_io_cpu, harness]
     if exe.exists():
         try:
@@ -123,7 +123,7 @@ def compile_cpu_baseline(orbench_root: Path) -> Path:
                 return exe
         except Exception:
             pass
-    cmd = ["gcc", "-O2", "-I", str(orbench_root / "framework"), str(harness), str(task_io_cpu), str(src), "-o", str(exe), "-lm"]
+    cmd = ["gcc", "-O2", "-I", str(acceleval_root / "framework"), str(harness), str(task_io_cpu), str(src), "-o", str(exe), "-lm"]
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError(f"CPU baseline compile failed:\n{r.stderr}")
@@ -190,7 +190,7 @@ def main() -> None:
             for x in dist:
                 f.write(f"{int(x)}\n")
 
-        exe = compile_cpu_baseline(_ORBENCH_ROOT)
+        exe = compile_cpu_baseline(_ACCELEVAL_ROOT)
         cpu_ms = run_cpu_time(exe, out_dir)
         with open(out_dir / "cpu_time_ms.txt", "w", encoding="utf-8") as f:
             f.write(f"{cpu_ms:.6f}\n")

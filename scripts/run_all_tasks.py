@@ -24,12 +24,12 @@ from pathlib import Path
 
 # Setup path
 _SCRIPT_DIR = Path(__file__).resolve().parent
-_ORBENCH_ROOT = _SCRIPT_DIR.parent
-sys.path.insert(0, str(_ORBENCH_ROOT))
-os.chdir(str(_ORBENCH_ROOT))
+_ACCELEVAL_ROOT = _SCRIPT_DIR.parent
+sys.path.insert(0, str(_ACCELEVAL_ROOT))
+os.chdir(str(_ACCELEVAL_ROOT))
 
 # Load .env
-_env_file = _ORBENCH_ROOT / ".env"
+_env_file = _ACCELEVAL_ROOT / ".env"
 if _env_file.exists():
     with open(_env_file) as f:
         for line in f:
@@ -46,7 +46,7 @@ from framework.agent.multiturn import run_multiturn
 
 def get_ready_tasks() -> list[str]:
     """Return task IDs that have medium data + prompt template ready."""
-    tasks_dir = _ORBENCH_ROOT / "tasks"
+    tasks_dir = _ACCELEVAL_ROOT / "tasks"
     ready = []
     for task_dir in sorted(tasks_dir.iterdir()):
         if not task_dir.is_dir():
@@ -215,8 +215,8 @@ def main():
     # Run summarize
     import subprocess
     subprocess.run([
-        sys.executable, str(_ORBENCH_ROOT / "scripts" / "summarize_run.py"),
-        str(_ORBENCH_ROOT / "runs" / run_name),
+        sys.executable, str(_ACCELEVAL_ROOT / "scripts" / "summarize_run.py"),
+        str(_ACCELEVAL_ROOT / "runs" / run_name),
     ])
 
 

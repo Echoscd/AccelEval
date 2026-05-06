@@ -4,7 +4,7 @@
 // Simulates dry, stratified, compressible, non-hydrostatic fluid flows.
 // All compile-time constants converted to runtime parameters.
 //
-// Build: gcc -O2 -DORBENCH_COMPUTE_ONLY -I framework/
+// Build: gcc -O2 -DACCELEVAL_COMPUTE_ONLY -I framework/
 //        framework/harness_cpu.c tasks/miniWeather/task_io_cpu.c
 //        tasks/miniWeather/cpu_reference.c -o solution_cpu -lm
 
@@ -413,7 +413,7 @@ static void reductions(double *state, double *mass_out, double *te_out) {
     *te_out   = te;
 }
 
-// ===== ORBench compute_only interface =====
+// ===== AccelEval compute_only interface =====
 
 void solution_compute(
     int nx_in, int nz_in,

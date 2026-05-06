@@ -50,7 +50,7 @@ static void KerUpdatePos(double px, double py, double pz,
 
 // ===== Public interface =====
 
-static void _orbench_old_init(int N,
+static void _acceleval_old_init(int N,
                    const float* posxy_x, const float* posxy_y,
                    const float* posz,
                    const float* movxy_x, const float* movxy_y,
@@ -67,7 +67,7 @@ static void _orbench_old_init(int N,
     g_cell_size = cell_size;
 }
 
-static void _orbench_old_compute(int N,
+static void _acceleval_old_compute(int N,
                       double* out_x, double* out_y, double* out_z,
                       int* out_cell)
 {
@@ -86,6 +86,6 @@ static void _orbench_old_compute(int N,
 
 // ── Unified compute_only wrapper (auto-migrated) ──
 void solution_compute(int N, const float* posxy_x, const float* posxy_y, const float* posz, const float* movxy_x, const float* movxy_y, const float* movz, float cell_size, double* out_x, double* out_y, double* out_z, int* out_cell) {
-    _orbench_old_init(N, posxy_x, posxy_y, posz, movxy_x, movxy_y, movz, cell_size);
-    _orbench_old_compute(N, out_x, out_y, out_z, out_cell);
+    _acceleval_old_init(N, posxy_x, posxy_y, posz, movxy_x, movxy_y, movz, cell_size);
+    _acceleval_old_compute(N, out_x, out_y, out_z, out_cell);
 }

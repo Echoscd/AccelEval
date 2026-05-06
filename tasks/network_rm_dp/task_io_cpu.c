@@ -3,11 +3,11 @@
 // In compute_only mode, task_setup only parses input to HOST memory.
 // task_run calls solution_compute with all parameters (no solution_init).
 //
-// Build: gcc -O2 -DORBENCH_COMPUTE_ONLY -I framework/
+// Build: gcc -O2 -DACCELEVAL_COMPUTE_ONLY -I framework/
 //        framework/harness_cpu.c tasks/network_rm_dp/task_io_cpu.c
 //        tasks/network_rm_dp/cpu_reference.c -o solution_cpu -lm
 
-#include "orbench_io.h"
+#include "acceleval_io.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

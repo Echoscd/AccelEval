@@ -1,4 +1,4 @@
-# ORBench Model Registry
+# AccelEval Model Registry
 # All LLM API configurations in one place.
 # API keys are read from environment variables (never stored here).
 

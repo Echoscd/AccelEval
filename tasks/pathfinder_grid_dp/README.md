@@ -22,8 +22,8 @@ This task is adapted from the real GitHub benchmark source:
 - Benchmark: `openmp/pathfinder/pathfinder.cpp`
 - Suite: Rodinia Benchmark Suite (University of Virginia)
 
-The ORBench version keeps the same core recurrence and row-by-row update structure,
-while converting the benchmark into ORBench's `input.bin` / `expected_output.txt` format.
+The AccelEval version keeps the same core recurrence and row-by-row update structure,
+while converting the benchmark into AccelEval's `input.bin` / `expected_output.txt` format.
 
 ## Why It Fits GPU Acceleration
 
@@ -37,7 +37,7 @@ That makes this task a good test of wavefront scheduling, buffering, and launch-
 
 ## Input Format
 
-Binary file `input.bin` (ORBench v2 format):
+Binary file `input.bin` (AccelEval v2 format):
 
 | Tensor | Type | Shape | Description |
 |---|---|---:|---|
@@ -67,7 +67,7 @@ Format: "%d\n" per line
 | medium | 8192 | 1024 | 8.39M |
 | large | 32768 | 2048 | 67.11M |
 
-## Notes for ORBench Integration
+## Notes for AccelEval Integration
 
 - Recommended interface mode: `init_compute`
 - Correctness check: exact integer match (`atol = 0`)

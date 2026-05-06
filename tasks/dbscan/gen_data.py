@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-gen_data.py (ORBench v2) - Generate DBSCAN clustering data.
+gen_data.py (AccelEval v2) - Generate DBSCAN clustering data.
 
 Generates clustered 2D point data with known cluster structure.
 Points are arranged in Gaussian clusters so that DBSCAN with the right
@@ -19,9 +19,9 @@ from pathlib import Path
 
 import numpy as np
 
-_ORBENCH_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(_ORBENCH_ROOT))
-from framework.orbench_io_py import write_input_bin
+_ACCELEVAL_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ACCELEVAL_ROOT))
+from framework.acceleval_io_py import write_input_bin
 
 SIZES = {
     "small":  {"N": 10000,  "eps_x10000": 300, "minPts": 4, "seed": 42,
@@ -69,12 +69,12 @@ def generate_clustered_points(N, num_clusters, cluster_std, noise_frac, seed):
     return xs, ys
 
 
-def compile_cpu_baseline(orbench_root: Path) -> Path:
-    task_dir = orbench_root / "tasks" / "dbscan"
+def compile_cpu_baseline(acceleval_root: Path) -> Path:
+    task_dir = acceleval_root / "tasks" / "dbscan"
     exe = task_dir / "solution_cpu"
     src = task_dir / "cpu_reference.c"
     task_io = task_dir / "task_io_cpu.c"
-    harness = orbench_root / "framework" / "harness_cpu.c"
+    harness = acceleval_root / "framework" / "harness_cpu.c"
 
     sources = [src, task_io, harness]
     if exe.exists():
@@ -85,7 +85,7 @@ def compile_cpu_baseline(orbench_root: Path) -> Path:
         except Exception:
             pass
 
-    cmd = ["gcc", "-O2", "-I", str(orbench_root / "framework"),
+    cmd = ["gcc", "-O2", "-I", str(acceleval_root / "framework"),
            str(harness), str(task_io), str(src),
            "-o", str(exe), "-lm"]
     r = subprocess.run(cmd, capture_output=True, text=True)
@@ -160,7 +160,7 @@ def main():
         f.write(f"{N}\n")
 
     if with_expected:
-        exe = compile_cpu_baseline(_ORBENCH_ROOT)
+        exe = compile_cpu_baseline(_ACCELEVAL_ROOT)
         time_ms = run_cpu_time(exe, out_dir)
         with open(out_dir / "cpu_time_ms.txt", "w") as f:
             f.write(f"{time_ms:.3f}\n")

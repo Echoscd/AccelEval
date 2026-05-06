@@ -1,5 +1,5 @@
 """
-validate.py - ORBench v2.1 correctness validation
+validate.py - AccelEval v2.1 correctness validation
 
 Two modes:
   1. validate_output(): Pure file comparison (output.txt vs expected_output.txt).
@@ -140,13 +140,13 @@ def validate_solution(
     env["CUDA_VISIBLE_DEVICES"] = str(device_id)
 
     sizes_to_test = task.input_sizes if task.input_sizes else {"default": {}}
-    restrict = os.environ.get("ORBENCH_VALIDATE_SIZES")
+    restrict = os.environ.get("ACCELEVAL_VALIDATE_SIZES")
     if restrict:
         allow = {s.strip() for s in restrict.split(",") if s.strip()}
         sizes_to_test = {k: v for k, v in sizes_to_test.items() if k in allow}
         if not sizes_to_test:
             result.correct = False
-            result.error = f"No sizes match ORBENCH_VALIDATE_SIZES={restrict}"
+            result.error = f"No sizes match ACCELEVAL_VALIDATE_SIZES={restrict}"
             return result
 
     for size_name, size_params in sizes_to_test.items():

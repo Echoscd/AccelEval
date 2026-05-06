@@ -23,5 +23,5 @@ Tensors:
 ## Output
 - `y` (`float64[n]`): output vector `A x`
 
-## ORBench adaptation note
+## AccelEval adaptation note
 The official HPCG generator initializes the exact solution vector to all ones. This task follows that convention and uses `x = 1`.

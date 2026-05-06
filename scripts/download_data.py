@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Download ORBench test data from HuggingFace Hub.
+Download AccelEval test data from HuggingFace Hub.
 
 Usage:
   # First-time: pip install huggingface_hub
@@ -15,7 +15,7 @@ Usage:
   python3 scripts/download_data.py all             # 12 GB
 
   # Use a specific repo
-  python3 scripts/download_data.py --repo-id myuser/orbench-data small
+  python3 scripts/download_data.py --repo-id myuser/acceleval-data small
 """
 import argparse, os, tarfile, sys, json, hashlib
 from pathlib import Path

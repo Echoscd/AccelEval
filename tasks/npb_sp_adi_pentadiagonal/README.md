@@ -1,10 +1,10 @@
 # NPB SP Structured ADI Pentadiagonal Sweep
 
-This ORBench task is **adapted from the NAS Parallel Benchmarks (NPB) SP benchmark family** in the GitHub repository `benchmark-subsetting/NPB3.0-omp-C`, especially the SP benchmark pipeline organized around `compute_rhs`, `txinvr`, `x_solve`, `y_solve`, `z_solve`, and `add` in `SP/sp.c`.
+This AccelEval task is **adapted from the NAS Parallel Benchmarks (NPB) SP benchmark family** in the GitHub repository `benchmark-subsetting/NPB3.0-omp-C`, especially the SP benchmark pipeline organized around `compute_rhs`, `txinvr`, `x_solve`, `y_solve`, `z_solve`, and `add` in `SP/sp.c`.
 
 The original NPB SP benchmark is one of NPB's three pseudo-applications and is classified by NASA as the **Scalar Penta-diagonal solver**. The OpenMP C repository's change log explicitly describes SP in terms of splitting `adi` into `compute_rhs`, `txinvr`, `x_solve and ninvr`, `y_solve and tzetar`, `z_solve and pinvr`, and `add`.
 
-This ORBench task keeps that same algorithmic shape — repeated **residual construction + local transforms + directional scalar line solves** on a 3D structured grid with **5 coupled unknowns per point** — while repackaging it as a self-contained benchmark with generated binary inputs and a pure-C CPU reference.
+This AccelEval task keeps that same algorithmic shape — repeated **residual construction + local transforms + directional scalar line solves** on a 3D structured grid with **5 coupled unknowns per point** — while repackaging it as a self-contained benchmark with generated binary inputs and a pure-C CPU reference.
 
 ## Problem background
 
@@ -50,4 +50,4 @@ Adapted from the NPB SP benchmark family in:
 - benchmark directory: `SP/`
 - key source file: `SP/sp.c`
 
-This ORBench version is **not** a bit-for-bit port of the full NPB SP pseudo-application. Instead, it extracts the SP benchmark's **structured-grid ADI + scalar pentadiagonal solve flavor** and packages it into ORBench's `init_compute` format with explicit generated state and forcing inputs.
+This AccelEval version is **not** a bit-for-bit port of the full NPB SP pseudo-application. Instead, it extracts the SP benchmark's **structured-grid ADI + scalar pentadiagonal solve flavor** and packages it into AccelEval's `init_compute` format with explicit generated state and forcing inputs.

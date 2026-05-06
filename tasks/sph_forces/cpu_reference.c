@@ -143,7 +143,7 @@ static void InteractionForcesFluidBox(
 
 // ===== Public interface =====
 
-static void _orbench_old_init(int N,
+static void _acceleval_old_init(int N,
                    const float* xs, const float* ys, const float* zs,
                    const float* vxs, const float* vys, const float* vzs,
                    const float* rhos, const float* masses,
@@ -187,7 +187,7 @@ static void _orbench_old_init(int N,
     g_ovrhopzero = 1.0f / rhop0;
 }
 
-static void _orbench_old_compute(int N,
+static void _acceleval_old_compute(int N,
                       float* ax, float* ay, float* az, float* drhodt)
 {
     int i;
@@ -250,6 +250,6 @@ static void _orbench_old_compute(int N,
 
 // ── Unified compute_only wrapper (auto-migrated) ──
 void solution_compute(int N, const float* xs, const float* ys, const float* zs, const float* vxs, const float* vys, const float* vzs, const float* rhos, const float* masses, float h, float cs0, float rhop0, float alpha_visc, const int* cell_begin, const int* cell_end, const int* sorted_idx, int grid_nx, int grid_ny, int grid_nz, float cell_size, float* ax, float* ay, float* az, float* drhodt) {
-    _orbench_old_init(N, xs, ys, zs, vxs, vys, vzs, rhos, masses, h, cs0, rhop0, alpha_visc, cell_begin, cell_end, sorted_idx, grid_nx, grid_ny, grid_nz, cell_size);
-    _orbench_old_compute(N, ax, ay, az, drhodt);
+    _acceleval_old_init(N, xs, ys, zs, vxs, vys, vzs, rhos, masses, h, cs0, rhop0, alpha_visc, cell_begin, cell_end, sorted_idx, grid_nx, grid_ny, grid_nz, cell_size);
+    _acceleval_old_compute(N, ax, ay, az, drhodt);
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-gen_data.py (ORBench v2) — Generate all-pairs Hausdorff distance data.
+gen_data.py (AccelEval v2) — Generate all-pairs Hausdorff distance data.
 
 Generates `num_spaces` random 2D point clouds (e.g. trajectories), each with
 `points_per_space` points sampled around a randomly placed center.
@@ -18,10 +18,10 @@ from pathlib import Path
 
 import numpy as np
 
-_ORBENCH_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(_ORBENCH_ROOT))
+_ACCELEVAL_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ACCELEVAL_ROOT))
 
-from framework.orbench_io_py import write_input_bin
+from framework.acceleval_io_py import write_input_bin
 
 SIZES = {
     "small":  {"num_spaces": 16, "points_per_space": 64,  "seed": 42},
@@ -55,12 +55,12 @@ def generate_data(num_spaces, points_per_space, seed):
 # CPU baseline compile/run
 # ---------------------------------------------------------------------------
 
-def compile_cpu_baseline(orbench_root: Path) -> Path:
-    task_dir = orbench_root / "tasks" / "hausdorff_distance"
+def compile_cpu_baseline(acceleval_root: Path) -> Path:
+    task_dir = acceleval_root / "tasks" / "hausdorff_distance"
     exe = task_dir / "solution_cpu"
     src = task_dir / "cpu_reference.c"
     task_io_cpu = task_dir / "task_io_cpu.c"
-    harness = orbench_root / "framework" / "harness_cpu.c"
+    harness = acceleval_root / "framework" / "harness_cpu.c"
 
     sources = [src, task_io_cpu, harness]
     if exe.exists():
@@ -73,7 +73,7 @@ def compile_cpu_baseline(orbench_root: Path) -> Path:
 
     cmd = [
         "gcc", "-O2",
-        "-I", str(orbench_root / "framework"),
+        "-I", str(acceleval_root / "framework"),
         str(harness), str(task_io_cpu), str(src),
         "-o", str(exe), "-lm",
     ]
@@ -151,7 +151,7 @@ def main():
         f.write(f"{num_spaces}\n")
 
     if with_expected:
-        exe = compile_cpu_baseline(_ORBENCH_ROOT)
+        exe = compile_cpu_baseline(_ACCELEVAL_ROOT)
         time_ms = run_cpu_time(exe, out_dir)
         with open(out_dir / "cpu_time_ms.txt", "w") as f:
             f.write(f"{time_ms:.3f}\n")

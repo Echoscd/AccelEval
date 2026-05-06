@@ -1,5 +1,5 @@
 """
-orbench_io_py.py - Python utilities for ORBench v2 input.bin writing.
+acceleval_io_py.py - Python utilities for AccelEval v2 input.bin writing.
 
 This module is used by tasks/*/gen_data.py to generate:
   - input.bin (header + TensorDesc + ParamEntry + raw tensor bytes)
@@ -113,7 +113,7 @@ def write_input_bin(
     version: int = 1,
 ) -> None:
     """
-    Write ORBench v2 input.bin.
+    Write AccelEval v2 input.bin.
 
     Args:
         out_path: output file path
@@ -170,7 +170,7 @@ def write_input_bin(
     # Write file
     with open(out_path, "wb") as f:
         # FileHeader
-        magic = b"ORBENCH\x00"
+        magic = b"ACCELEVAL\x00"
         f.write(
             struct.pack(
                 "<8siiiiq",

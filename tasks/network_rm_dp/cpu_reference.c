@@ -4,7 +4,7 @@
 // NO file I/O. All I/O handled by task_io_cpu.c.
 //
 // Build (via task_io + harness):
-//   gcc -O2 -DORBENCH_COMPUTE_ONLY -I framework/
+//   gcc -O2 -DACCELEVAL_COMPUTE_ONLY -I framework/
 //       framework/harness_cpu.c tasks/network_rm_dp/task_io_cpu.c
 //       tasks/network_rm_dp/cpu_reference.c -o solution_cpu -lm
 

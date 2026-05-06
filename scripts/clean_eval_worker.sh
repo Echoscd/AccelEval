@@ -6,7 +6,7 @@
 # (newline-separated). The model partition is decided by the master script.
 
 set -u
-cd /root/chendong/ORbench/ORBench
+cd /root/chendong/AccelEval/AccelEval
 
 GPU=$1
 TS=${TS:-$(date +%Y%m%d_%H%M)}

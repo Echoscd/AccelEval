@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ORBench - General-Purpose CPU-to-CUDA Acceleration Benchmark for LLMs
+AccelEval - General-Purpose CPU-to-CUDA Acceleration Benchmark for LLMs
 
 Usage:
     # Generate solutions (legacy single model)
@@ -140,7 +140,7 @@ def cmd_generate_batch(args):
     jobs = scheduler.build_jobs(model_ids, task_ids, levels, num_samples)
 
     print(f"\n{'='*60}")
-    print(f"  ORBench Batch Generation")
+    print(f"  AccelEval Batch Generation")
     print(f"{'='*60}")
     print(f"  Models:  {len(model_ids):>3d}  {model_ids}")
     print(f"  Tasks:   {len(task_ids):>3d}  {task_ids}")
@@ -185,9 +185,9 @@ def cmd_generate_batch(args):
 def cmd_eval(args):
     from framework.batch_eval import batch_eval
 
-    # Set ORBENCH_VALIDATE_SIZES environment variable if --sizes is specified
+    # Set ACCELEVAL_VALIDATE_SIZES environment variable if --sizes is specified
     if args.sizes:
-        os.environ["ORBENCH_VALIDATE_SIZES"] = ",".join(args.sizes)
+        os.environ["ACCELEVAL_VALIDATE_SIZES"] = ",".join(args.sizes)
 
     # Load config and merge CLI args
     cli_args = {
@@ -259,7 +259,7 @@ def cmd_compare(args):
             all_tasks.add(res["task_id"])
 
     print(f"\n{'═'*70}")
-    print(f"  ORBench Cross-Model Comparison")
+    print(f"  AccelEval Cross-Model Comparison")
     print(f"{'═'*70}\n")
 
     for task_id in sorted(all_tasks):
@@ -311,8 +311,8 @@ def cmd_compare(args):
             # Try to find cost info from meta files
             total_cost = 0.0
             meta_found = False
-            from framework.task import ORBENCH_ROOT
-            run_dir = os.path.join(ORBENCH_ROOT, "runs", rn, task_id)
+            from framework.task import ACCELEVAL_ROOT
+            run_dir = os.path.join(ACCELEVAL_ROOT, "runs", rn, task_id)
             if os.path.isdir(run_dir):
                 for fn in os.listdir(run_dir):
                     if fn.endswith("_meta.json"):
@@ -371,7 +371,7 @@ def cmd_compare(args):
 # ═══════════════════════════════════════════════════════════════
 
 def main():
-    parser = argparse.ArgumentParser(description="ORBench CLI")
+    parser = argparse.ArgumentParser(description="AccelEval CLI")
     subparsers = parser.add_subparsers(dest="command")
 
     # ── list ──
@@ -403,7 +403,7 @@ def main():
     p_batch.add_argument("--temperature", type=float, default=0.7,
         help="Sampling temperature")
     p_batch.add_argument("--models-yaml", default=None,
-        help="Path to models.yaml (default: ORBENCH_ROOT/models.yaml)")
+        help="Path to models.yaml (default: ACCELEVAL_ROOT/models.yaml)")
     p_batch.add_argument("--run-tag", default="batch",
         help="Tag for progress file naming")
     p_batch.add_argument("--guidance-dir", default=None,

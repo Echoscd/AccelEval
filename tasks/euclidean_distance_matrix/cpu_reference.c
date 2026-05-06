@@ -57,7 +57,7 @@ static void compute_distancesCpu(int          ref_nb,
 
 // ===== Public interface =====
 
-static void _orbench_old_init(int          ref_nb,
+static void _acceleval_old_init(int          ref_nb,
                    int          query_nb,
                    int          dim,
                    const float* ref,
@@ -70,7 +70,7 @@ static void _orbench_old_init(int          ref_nb,
     g_query    = query;
 }
 
-static void _orbench_old_compute(int    ref_nb,
+static void _acceleval_old_compute(int    ref_nb,
                       int    query_nb,
                       int    dim,
                       float* dist)
@@ -82,6 +82,6 @@ static void _orbench_old_compute(int    ref_nb,
 
 // ── Unified compute_only wrapper (auto-migrated) ──
 void solution_compute(int ref_nb, int query_nb, int dim, const float* ref, const float* query, float* dist) {
-    _orbench_old_init(ref_nb, query_nb, dim, ref, query);
-    _orbench_old_compute(ref_nb, query_nb, dim, dist);
+    _acceleval_old_init(ref_nb, query_nb, dim, ref, query);
+    _acceleval_old_compute(ref_nb, query_nb, dim, dist);
 }

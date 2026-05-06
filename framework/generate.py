@@ -14,7 +14,7 @@ import json
 import argparse
 from typing import Optional
 
-from .task import load_task, load_prompt, ORBENCH_ROOT
+from .task import load_task, load_prompt, ACCELEVAL_ROOT
 from .config import get_config
 
 
@@ -109,7 +109,7 @@ def generate_solutions(
     if run_name is None:
         run_name = f"{model.replace('/', '_')}_l{level}"
 
-    run_dir = os.path.join(ORBENCH_ROOT, "runs", run_name, task_id)
+    run_dir = os.path.join(ACCELEVAL_ROOT, "runs", run_name, task_id)
     os.makedirs(run_dir, exist_ok=True)
 
     saved_paths = []
@@ -175,7 +175,7 @@ def generate_with_registry(
     if run_name is None:
         run_name = f"{model_id}_l{level}"
 
-    run_dir = os.path.join(ORBENCH_ROOT, "runs", run_name, task_id)
+    run_dir = os.path.join(ACCELEVAL_ROOT, "runs", run_name, task_id)
     os.makedirs(run_dir, exist_ok=True)
     output_path = os.path.join(run_dir, f"sample_{sample_id}.cu")
 

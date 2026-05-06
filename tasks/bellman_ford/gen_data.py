@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-gen_data.py (ORBench v2) - Generate input.bin + requests + expected_output.txt + cpu_time_ms.txt
+gen_data.py (AccelEval v2) - Generate input.bin + requests + expected_output.txt + cpu_time_ms.txt
 
 Usage:
   python3 gen_data.py <size_name> <output_dir> [--with-expected]
@@ -15,10 +15,10 @@ from pathlib import Path
 
 import numpy as np
 
-_ORBENCH_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(_ORBENCH_ROOT))
+_ACCELEVAL_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ACCELEVAL_ROOT))
 
-from framework.orbench_io_py import write_input_bin
+from framework.acceleval_io_py import write_input_bin
 
 
 SIZES = {
@@ -72,11 +72,11 @@ def generate_graph_csr(V: int, E: int, seed: int):
     return row_offsets, col_indices, weights
 
 
-def compile_cpu_baseline(orbench_root: Path) -> Path:
-    exe = orbench_root / "tasks" / "bellman_ford" / "solution_cpu"
-    src = orbench_root / "tasks" / "bellman_ford" / "cpu_reference.c"
-    task_io_cpu = orbench_root / "tasks" / "bellman_ford" / "task_io_cpu.c"
-    harness = orbench_root / "framework" / "harness_cpu.c"
+def compile_cpu_baseline(acceleval_root: Path) -> Path:
+    exe = acceleval_root / "tasks" / "bellman_ford" / "solution_cpu"
+    src = acceleval_root / "tasks" / "bellman_ford" / "cpu_reference.c"
+    task_io_cpu = acceleval_root / "tasks" / "bellman_ford" / "task_io_cpu.c"
+    harness = acceleval_root / "framework" / "harness_cpu.c"
     # Simple cache: if exe exists and is newer than all sources, reuse
     sources = [src, task_io_cpu, harness]
     if exe.exists():
@@ -89,7 +89,7 @@ def compile_cpu_baseline(orbench_root: Path) -> Path:
     # v2.1: three-file compilation  harness + task_io + cpu_reference
     cmd = [
         "gcc", "-O2",
-        "-I", str(orbench_root / "framework"),
+        "-I", str(acceleval_root / "framework"),
         str(harness),
         str(task_io_cpu),
         str(src),
@@ -172,7 +172,7 @@ def main():
 
     if with_expected:
         # 4) Compile + run CPU baseline to produce expected_output and cpu_time
-        exe = compile_cpu_baseline(_ORBENCH_ROOT)
+        exe = compile_cpu_baseline(_ACCELEVAL_ROOT)
         time_ms = run_cpu_time(exe, out_dir)
         with open(out_dir / "cpu_time_ms.txt", "w") as f:
             f.write(f"{time_ms:.3f}\n")

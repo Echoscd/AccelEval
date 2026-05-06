@@ -10,7 +10,7 @@
 #          full tree by pgid even if the worker shell dies abruptly.
 
 set -u
-cd /root/chendong/ORbench/ORBench
+cd /root/chendong/AccelEval/AccelEval
 
 TS=$(date +%Y%m%d_%H%M)
 MASTER_LOG=logs/dual_eval_master_${TS}.log

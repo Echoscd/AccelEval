@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 from pathlib import Path
 
-from .task import ORBENCH_ROOT
+from .task import ACCELEVAL_ROOT
 
 
 @dataclass(frozen=True)
@@ -131,13 +131,13 @@ def load_config_file(config_path: Optional[str] = None) -> dict:
     Load configuration from YAML file.
     
     Args:
-        config_path: Path to config.yaml (default: ORBENCH_ROOT/config.yaml)
+        config_path: Path to config.yaml (default: ACCELEVAL_ROOT/config.yaml)
     
     Returns:
         Dictionary with configuration values
     """
     if config_path is None:
-        config_path = os.path.join(ORBENCH_ROOT, "config.yaml")
+        config_path = os.path.join(ACCELEVAL_ROOT, "config.yaml")
     
     if not os.path.exists(config_path):
         # Return empty dict if config file doesn't exist (use defaults)
@@ -211,7 +211,7 @@ def load_config(config_path: Optional[str] = None, cli_args: Optional[dict] = No
     Load configuration from YAML file and merge CLI arguments.
     
     Args:
-        config_path: Path to config.yaml (default: ORBENCH_ROOT/config.yaml)
+        config_path: Path to config.yaml (default: ACCELEVAL_ROOT/config.yaml)
         cli_args: Dictionary of CLI arguments to override YAML defaults
     
     Returns:

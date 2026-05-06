@@ -25,5 +25,5 @@ Tensors:
 ## Output
 - `x` (`float64[n]`): result after one symmetric Gauss-Seidel sweep (forward then backward)
 
-## ORBench adaptation note
+## AccelEval adaptation note
 This task uses the same 27-point matrix structure as the official HPCG reference generator and uses an all-ones exact vector to derive `rhs = A * 1`. The provided initial guess is the all-zero vector.

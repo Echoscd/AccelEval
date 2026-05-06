@@ -24,7 +24,7 @@ import traceback
 
 from ..config import get_config
 from ..generate import extract_cuda_code
-from ..task import load_prompt, ORBENCH_ROOT
+from ..task import load_prompt, ACCELEVAL_ROOT
 from ..batch_eval import eval_single_sample, EvalResult
 from ..llm.registry import LLMRegistry
 
@@ -166,7 +166,7 @@ def run_multiturn(
     Execute multi-turn generation+eval loops.
 
     Artifacts are saved under:
-      ORBENCH_ROOT/runs/<run_name>/<task_id>/agent_r<rep>_t<turn>.*
+      ACCELEVAL_ROOT/runs/<run_name>/<task_id>/agent_r<rep>_t<turn>.*
     """
     if turns < 1:
         raise ValueError("turns must be >= 1")
@@ -191,7 +191,7 @@ def run_multiturn(
 
     records: list[TurnRecord] = []
 
-    out_dir = os.path.join(ORBENCH_ROOT, "runs", run_name, task_id)
+    out_dir = os.path.join(ACCELEVAL_ROOT, "runs", run_name, task_id)
     os.makedirs(out_dir, exist_ok=True)
     progress_path = os.path.join(out_dir, "agent_progress.jsonl")
 

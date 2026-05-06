@@ -30,7 +30,7 @@ static const FLOAT* g_power = NULL;
 static FLOAT* g_buf_a = NULL;
 static FLOAT* g_buf_b = NULL;
 
-static void _orbench_old_init(int rows, int cols, int iters,
+static void _acceleval_old_init(int rows, int cols, int iters,
                    const float* temp0,
                    const float* power) {
     g_rows = rows;
@@ -46,7 +46,7 @@ static void _orbench_old_init(int rows, int cols, int iters,
     g_buf_b = (FLOAT*)malloc(n * sizeof(FLOAT));
 }
 
-static void _orbench_old_compute(float* out_temp) {
+static void _acceleval_old_compute(float* out_temp) {
     if (!g_temp0 || !g_power || !g_buf_a || !g_buf_b || !out_temp ||
         g_rows <= 0 || g_cols <= 0 || g_iters <= 0) {
         return;
@@ -145,6 +145,6 @@ static void _orbench_old_compute(float* out_temp) {
 
 // ── Unified compute_only wrapper (auto-migrated) ──
 void solution_compute(int rows, int cols, int iters, const float* temp0, const float* power, float* out_temp) {
-    _orbench_old_init(rows, cols, iters, temp0, power);
-    _orbench_old_compute(out_temp);
+    _acceleval_old_init(rows, cols, iters, temp0, power);
+    _acceleval_old_compute(out_temp);
 }

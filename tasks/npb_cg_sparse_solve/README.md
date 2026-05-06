@@ -1,10 +1,10 @@
 # NPB CG Sparse Conjugate Gradient Solve
 
-This ORBench task is **adapted from the NAS Parallel Benchmarks (NPB) CG benchmark** in the GitHub repository `benchmark-subsetting/NPB3.0-omp-C`, especially the CG benchmark's matrix-construction (`makea`) and conjugate-gradient (`conj_grad`) structure.
+This AccelEval task is **adapted from the NAS Parallel Benchmarks (NPB) CG benchmark** in the GitHub repository `benchmark-subsetting/NPB3.0-omp-C`, especially the CG benchmark's matrix-construction (`makea`) and conjugate-gradient (`conj_grad`) structure.
 
 The original NPB CG benchmark is a sparse iterative linear-algebra kernel that stresses **irregular memory access and communication**. In the NPB suite, CG is listed as the conjugate-gradient kernel, and the OpenMP C translation explicitly highlights updates around `makea`, `conj_grad`, and explicit residual-norm computation.
 
-This ORBench task keeps that same algorithmic shape — repeated sparse matrix-vector multiplies, dot products, and vector updates on a sparse symmetric positive definite system — but repackages it as a self-contained benchmark with generated CSR input, binary data files, and a pure-C CPU reference.
+This AccelEval task keeps that same algorithmic shape — repeated sparse matrix-vector multiplies, dot products, and vector updates on a sparse symmetric positive definite system — but repackages it as a self-contained benchmark with generated CSR input, binary data files, and a pure-C CPU reference.
 
 ## Problem background
 
@@ -50,4 +50,4 @@ Adapted from the NPB CG benchmark in:
 - GitHub repo: `benchmark-subsetting/NPB3.0-omp-C`
 - benchmark directory: `CG/`
 
-This ORBench version is **not** a bit-for-bit port of the full NPB class-driven inverse-iteration driver. Instead, it extracts the sparse-CG core and packages it into ORBench's `init_compute` format with explicit CSR input.
+This AccelEval version is **not** a bit-for-bit port of the full NPB class-driven inverse-iteration driver. Instead, it extracts the sparse-CG core and packages it into AccelEval's `init_compute` format with explicit CSR input.

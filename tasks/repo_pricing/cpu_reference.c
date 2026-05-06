@@ -1249,7 +1249,7 @@ static void getRepoResultsCpu(inArgsStruct inArgs, resultsStruct results, int to
 
 // ===== Interface functions =====
 
-static void _orbench_old_init(int N,
+static void _acceleval_old_init(int N,
                    const int* settle_year, const int* settle_month, const int* settle_day,
                    const int* delivery_year, const int* delivery_month, const int* delivery_day,
                    const int* issue_year, const int* issue_month, const int* issue_day,
@@ -1330,7 +1330,7 @@ static void _orbench_old_init(int N,
 }
 
 
-static void _orbench_old_compute(int N, float* prices)
+static void _acceleval_old_compute(int N, float* prices)
 {
 	getRepoResultsCpu(g_inArgs, g_results, N);
 
@@ -1354,6 +1354,6 @@ static void _orbench_old_compute(int N, float* prices)
 
 // ── Unified compute_only wrapper (auto-migrated) ──
 void solution_compute(int N, const int* settle_year, const int* settle_month, const int* settle_day, const int* delivery_year, const int* delivery_month, const int* delivery_day, const int* issue_year, const int* issue_month, const int* issue_day, const int* maturity_year, const int* maturity_month, const int* maturity_day, const float* bond_rates, const float* repo_rates, const float* bond_clean_prices, const float* dummy_strikes, float* prices) {
-    _orbench_old_init(N, settle_year, settle_month, settle_day, delivery_year, delivery_month, delivery_day, issue_year, issue_month, issue_day, maturity_year, maturity_month, maturity_day, bond_rates, repo_rates, bond_clean_prices, dummy_strikes);
-    _orbench_old_compute(N, prices);
+    _acceleval_old_init(N, settle_year, settle_month, settle_day, delivery_year, delivery_month, delivery_day, issue_year, issue_month, issue_day, maturity_year, maturity_month, maturity_day, bond_rates, repo_rates, bond_clean_prices, dummy_strikes);
+    _acceleval_old_compute(N, prices);
 }

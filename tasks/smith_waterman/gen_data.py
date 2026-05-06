@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-gen_data.py (ORBench v2) -- Generate Smith-Waterman local-alignment instances.
+gen_data.py (AccelEval v2) -- Generate Smith-Waterman local-alignment instances.
 
-Generates random DNA sequence pairs, writes ORBench input.bin, and optionally writes
+Generates random DNA sequence pairs, writes AccelEval input.bin, and optionally writes
 expected_output.txt using a Python reference implementation. It also compiles/runs the
 CPU baseline to produce cpu_time_ms.txt when possible.
 
@@ -19,10 +19,10 @@ from pathlib import Path
 
 import numpy as np
 
-_ORBENCH_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(_ORBENCH_ROOT))
+_ACCELEVAL_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ACCELEVAL_ROOT))
 
-from framework.orbench_io_py import write_input_bin
+from framework.acceleval_io_py import write_input_bin
 
 SIZES = {
     "small":  {"N": 1000,  "len_min": 64,  "len_max": 128, "seed": 42},
@@ -78,11 +78,11 @@ def smith_waterman_python(query, target, match, mismatch, gap):
     return best
 
 
-def compile_cpu_baseline(orbench_root: Path) -> Path:
-    exe = orbench_root / "tasks" / "smith_waterman" / "solution_cpu"
-    src = orbench_root / "tasks" / "smith_waterman" / "cpu_reference.c"
-    task_io_cpu = orbench_root / "tasks" / "smith_waterman" / "task_io_cpu.c"
-    harness = orbench_root / "framework" / "harness_cpu.c"
+def compile_cpu_baseline(acceleval_root: Path) -> Path:
+    exe = acceleval_root / "tasks" / "smith_waterman" / "solution_cpu"
+    src = acceleval_root / "tasks" / "smith_waterman" / "cpu_reference.c"
+    task_io_cpu = acceleval_root / "tasks" / "smith_waterman" / "task_io_cpu.c"
+    harness = acceleval_root / "framework" / "harness_cpu.c"
 
     sources = [src, task_io_cpu, harness]
     if exe.exists():
@@ -94,8 +94,8 @@ def compile_cpu_baseline(orbench_root: Path) -> Path:
             pass
 
     cmd = [
-        "gcc", "-O2", "-DORBENCH_COMPUTE_ONLY",
-        "-I", str(orbench_root / "framework"),
+        "gcc", "-O2", "-DACCELEVAL_COMPUTE_ONLY",
+        "-I", str(acceleval_root / "framework"),
         str(harness), str(task_io_cpu), str(src),
         "-o", str(exe), "-lm",
     ]
@@ -207,7 +207,7 @@ def main():
         timeout = estimate_timeout(total_cells)
         print(f"  Compiling/running CPU baseline (timeout={timeout}s) for timing and stack validation...")
         try:
-            exe = compile_cpu_baseline(_ORBENCH_ROOT)
+            exe = compile_cpu_baseline(_ACCELEVAL_ROOT)
             time_ms = run_cpu_time(exe, out_dir, timeout=timeout)
             with open(out_dir / "cpu_time_ms.txt", "w") as f:
                 f.write(f"{time_ms:.3f}\n")

@@ -42,11 +42,11 @@ class LLMRegistry:
         Load models.yaml.
 
         Args:
-            config_path: Path to models.yaml. Defaults to ORBENCH_ROOT/models.yaml.
+            config_path: Path to models.yaml. Defaults to ACCELEVAL_ROOT/models.yaml.
         """
         if config_path is None:
-            from ..task import ORBENCH_ROOT
-            config_path = os.path.join(ORBENCH_ROOT, "models.yaml")
+            from ..task import ACCELEVAL_ROOT
+            config_path = os.path.join(ACCELEVAL_ROOT, "models.yaml")
 
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Model registry not found: {config_path}")

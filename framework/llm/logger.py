@@ -13,10 +13,10 @@ import time
 import threading
 from typing import Optional
 
-from ..task import ORBENCH_ROOT
+from ..task import ACCELEVAL_ROOT
 
 
-LOGS_DIR = os.path.join(ORBENCH_ROOT, "logs")
+LOGS_DIR = os.path.join(ACCELEVAL_ROOT, "logs")
 
 # Module-level lock for thread-safe writes
 _write_lock = threading.Lock()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Upload ORBench data to HuggingFace Hub as a dataset repo.
+Upload AccelEval data to HuggingFace Hub as a dataset repo.
 
 Usage:
   # First-time setup:
@@ -8,10 +8,10 @@ Usage:
   huggingface-cli login        # needs a write-access token from hf.co/settings/tokens
 
   # Upload:
-  python3 scripts/upload_to_hf.py --repo-id <org>/orbench-data
+  python3 scripts/upload_to_hf.py --repo-id <org>/acceleval-data
 
   # Only upload one size:
-  python3 scripts/upload_to_hf.py --repo-id <org>/orbench-data --size small
+  python3 scripts/upload_to_hf.py --repo-id <org>/acceleval-data --size small
 """
 import argparse, os, glob, tarfile, sys, json, hashlib
 from pathlib import Path
@@ -114,7 +114,7 @@ def upload(repo_id: str, files: list, private: bool = False):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo-id", required=True,
-                    help="HuggingFace dataset repo id, e.g. yourname/orbench-data")
+                    help="HuggingFace dataset repo id, e.g. yourname/acceleval-data")
     ap.add_argument("--size", choices=["small", "medium", "large", "all"],
                     default="all")
     ap.add_argument("--private", action="store_true")

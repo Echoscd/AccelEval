@@ -40,7 +40,7 @@ except ImportError:
 # Ensure project root is importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from framework.task import load_all_tasks, ORBENCH_ROOT
+from framework.task import load_all_tasks, ACCELEVAL_ROOT
 from framework.config import load_config, set_config, get_config
 from framework.llm.registry import LLMRegistry
 from framework.llm.scheduler import GenerationScheduler, GenerationJob, estimate_cost
@@ -70,7 +70,7 @@ def run_generate(
     """
     scheduler = GenerationScheduler(
         registry,
-        runs_dir=os.path.join(ORBENCH_ROOT, "runs"),
+        runs_dir=os.path.join(ACCELEVAL_ROOT, "runs"),
         guidance_dir=guidance_dir,
     )
     jobs = scheduler.build_jobs(model_ids, task_ids, levels, num_samples)
@@ -174,9 +174,9 @@ def run_eval(
         timeout = config.eval.timeout
 
     if sizes:
-        os.environ["ORBENCH_VALIDATE_SIZES"] = ",".join(sizes)
+        os.environ["ACCELEVAL_VALIDATE_SIZES"] = ",".join(sizes)
 
-    run_dir = os.path.join(ORBENCH_ROOT, "runs", run_name)
+    run_dir = os.path.join(ACCELEVAL_ROOT, "runs", run_name)
     if not os.path.exists(run_dir):
         print(f"  [WARN] Run directory not found: {run_dir}")
         return ""
@@ -348,7 +348,7 @@ def _print_comparison(combined: dict, run_names: list[str]):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="ORBench: Generate → Evaluate → Analyze (all-in-one)"
+        description="AccelEval: Generate → Evaluate → Analyze (all-in-one)"
     )
 
     # Generation args
@@ -403,7 +403,7 @@ def main():
     config = load_config(cli_args=cli_args)
     set_config(config)
 
-    output_dir = args.output_dir or os.path.join(ORBENCH_ROOT, "runs", "reports")
+    output_dir = args.output_dir or os.path.join(ACCELEVAL_ROOT, "runs", "reports")
 
     # Resolve task list
     if args.tasks:

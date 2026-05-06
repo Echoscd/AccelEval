@@ -1,10 +1,10 @@
 # NPB LU Structured SSOR Sweep
 
-This ORBench task is **adapted from the NAS Parallel Benchmarks (NPB) LU benchmark** in the GitHub repository `benchmark-subsetting/NPB3.0-omp-C`, especially the LU benchmark's **SSOR / lower-triangular / upper-triangular solver structure** exposed through the `ssor`, `blts`, and `buts` routines in `LU/lu.c`.
+This AccelEval task is **adapted from the NAS Parallel Benchmarks (NPB) LU benchmark** in the GitHub repository `benchmark-subsetting/NPB3.0-omp-C`, especially the LU benchmark's **SSOR / lower-triangular / upper-triangular solver structure** exposed through the `ssor`, `blts`, and `buts` routines in `LU/lu.c`.
 
 The original NPB LU benchmark is a pseudo-application derived from CFD. In the NPB benchmark suite, LU is listed as a **Lower-Upper symmetric Gauss-Seidel solver**. The OpenMP C translation retains the LU benchmark directory and the main solver pipeline built around `ssor`, while the source file declares and uses the `blts` and `buts` triangular-solve kernels.
 
-This ORBench task keeps that same algorithmic shape — repeated **lexicographic forward and backward block sweeps** on a 3D structured grid with **5 coupled unknowns per grid point** — but repackages it as a self-contained benchmark with generated binary inputs and a pure-C CPU reference.
+This AccelEval task keeps that same algorithmic shape — repeated **lexicographic forward and backward block sweeps** on a 3D structured grid with **5 coupled unknowns per grid point** — but repackages it as a self-contained benchmark with generated binary inputs and a pure-C CPU reference.
 
 ## Problem background
 
@@ -48,4 +48,4 @@ Adapted from the NPB LU benchmark family in:
 - benchmark directory: `LU/`
 - key source file: `LU/lu.c`
 
-This ORBench version is **not** a bit-for-bit port of the full NPB LU class-driven CFD solver. Instead, it extracts the LU benchmark's **structured-grid lower-upper SSOR flavor** and packages it into ORBench's `init_compute` format with explicit generated state and forcing inputs.
+This AccelEval version is **not** a bit-for-bit port of the full NPB LU class-driven CFD solver. Instead, it extracts the LU benchmark's **structured-grid lower-upper SSOR flavor** and packages it into AccelEval's `init_compute` format with explicit generated state and forcing inputs.

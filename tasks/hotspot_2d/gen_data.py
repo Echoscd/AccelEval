@@ -10,9 +10,9 @@ from pathlib import Path
 
 import numpy as np
 
-_ORBENCH_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(_ORBENCH_ROOT))
-from framework.orbench_io_py import write_input_bin
+_ACCELEVAL_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ACCELEVAL_ROOT))
+from framework.acceleval_io_py import write_input_bin
 
 SIZES = {
     "small":  {"rows": 256,  "cols": 256,  "iters": 50,  "seed": 7},
@@ -101,12 +101,12 @@ def hotspot_reference(temp0: np.ndarray, power: np.ndarray, rows: int, cols: int
     return src.reshape(-1)
 
 
-def compile_cpu_baseline(orbench_root: Path) -> Path:
-    task_dir = orbench_root / "tasks" / "hotspot_2d"
+def compile_cpu_baseline(acceleval_root: Path) -> Path:
+    task_dir = acceleval_root / "tasks" / "hotspot_2d"
     exe = task_dir / "solution_cpu"
     src = task_dir / "cpu_reference.c"
     task_io_cpu = task_dir / "task_io_cpu.c"
-    harness = orbench_root / "framework" / "harness_cpu.c"
+    harness = acceleval_root / "framework" / "harness_cpu.c"
     sources = [src, task_io_cpu, harness]
     if exe.exists():
         try:
@@ -115,7 +115,7 @@ def compile_cpu_baseline(orbench_root: Path) -> Path:
                 return exe
         except Exception:
             pass
-    cmd = ["gcc", "-O2", "-I", str(orbench_root / "framework"), str(harness), str(task_io_cpu), str(src), "-o", str(exe), "-lm"]
+    cmd = ["gcc", "-O2", "-I", str(acceleval_root / "framework"), str(harness), str(task_io_cpu), str(src), "-o", str(exe), "-lm"]
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError(f"CPU baseline compile failed:\n{r.stderr}")
@@ -165,7 +165,7 @@ def main() -> None:
         with open(out_dir / "expected_output.txt", "w", encoding="utf-8") as f:
             for x in expected:
                 f.write(f"{float(x):.6e}\n")
-        exe = compile_cpu_baseline(_ORBENCH_ROOT)
+        exe = compile_cpu_baseline(_ACCELEVAL_ROOT)
         # sanity check against CPU baseline
         out_txt = out_dir / "output.txt"
         if out_txt.exists():

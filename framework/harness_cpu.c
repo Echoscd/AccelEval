@@ -1,4 +1,4 @@
-// harness_cpu.c - ORBench v2 CPU harness (clock_gettime timing)
+// harness_cpu.c - AccelEval v2 CPU harness (clock_gettime timing)
 
 #include <time.h>
 

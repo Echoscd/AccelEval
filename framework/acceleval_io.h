@@ -1,4 +1,4 @@
-// orbench_io.h - ORBench v2 binary input + request I/O (C, shared by CPU/GPU harness)
+// acceleval_io.h - AccelEval v2 binary input + request I/O (C, shared by CPU/GPU harness)
 //
 // NOTE:
 // - This header is included by both .c and .cu translation units.
@@ -12,8 +12,8 @@
 //   int*      get_tensor_int(const TaskData* data, const char* name);
 //   float*    get_tensor_float(const TaskData* data, const char* name);
 
-#ifndef ORBENCH_IO_H
-#define ORBENCH_IO_H
+#ifndef ACCELEVAL_IO_H
+#define ACCELEVAL_IO_H
 
 #include <stdint.h>
 #include <stdio.h>
@@ -27,7 +27,7 @@ extern "C" {
 // ===== input.bin format =====
 // FileHeader (32 bytes)
 typedef struct {
-    char     magic[8];      // "ORBENCH\0"
+    char     magic[8];      // "ACCELEVAL\0"
     int32_t  version;       // 1
     int32_t  num_tensors;   // number of TensorDesc entries
     int32_t  num_params;    // number of ParamEntry entries
@@ -73,25 +73,25 @@ typedef struct {
 } TaskData;
 
 // ===== helpers =====
-static int64_t _orbench_align64(int64_t x) {
+static int64_t _acceleval_align64(int64_t x) {
     return (x + 63) & ~((int64_t)63);
 }
 
-static int _orbench_check_magic(const char magic[8]) {
+static int _acceleval_check_magic(const char magic[8]) {
     const char expected[8] = { 'O','R','B','E','N','C','H','\0' };
     return memcmp(magic, expected, 8) == 0;
 }
 
-static int _orbench_dtype_size(int32_t dtype) {
+static int _acceleval_dtype_size(int32_t dtype) {
     if (dtype == 0) return 4;     // int32
     if (dtype == 1) return 4;     // float32
     if (dtype == 2) return 8;     // float64
     return 0;
 }
 
-static void _orbench_fatal(const char* msg, const char* path) {
-    if (path) fprintf(stderr, "[orbench_io] %s: %s\n", msg, path);
-    else fprintf(stderr, "[orbench_io] %s\n", msg);
+static void _acceleval_fatal(const char* msg, const char* path) {
+    if (path) fprintf(stderr, "[acceleval_io] %s: %s\n", msg, path);
+    else fprintf(stderr, "[acceleval_io] %s\n", msg);
     exit(1);
 }
 
@@ -101,40 +101,40 @@ static TaskData load_input_bin(const char* bin_path) {
     memset(&data, 0, sizeof(TaskData));
 
     FILE* f = fopen(bin_path, "rb");
-    if (!f) _orbench_fatal("Cannot open input.bin", bin_path);
+    if (!f) _acceleval_fatal("Cannot open input.bin", bin_path);
 
     FileHeader hdr;
     if (fread(&hdr, 1, sizeof(FileHeader), f) != sizeof(FileHeader)) {
         fclose(f);
-        _orbench_fatal("Failed to read FileHeader", bin_path);
+        _acceleval_fatal("Failed to read FileHeader", bin_path);
     }
 
-    if (!_orbench_check_magic(hdr.magic)) {
+    if (!_acceleval_check_magic(hdr.magic)) {
         fclose(f);
-        _orbench_fatal("Bad magic (expected ORBENCH\\0)", bin_path);
+        _acceleval_fatal("Bad magic (expected ACCELEVAL\\0)", bin_path);
     }
     if (hdr.version != 1) {
         fclose(f);
-        _orbench_fatal("Unsupported version", bin_path);
+        _acceleval_fatal("Unsupported version", bin_path);
     }
     if (hdr.num_tensors < 0 || hdr.num_params < 0) {
         fclose(f);
-        _orbench_fatal("Invalid counts in header", bin_path);
+        _acceleval_fatal("Invalid counts in header", bin_path);
     }
     if (hdr.data_offset <= 0 || (hdr.data_offset % 64) != 0) {
         fclose(f);
-        _orbench_fatal("data_offset must be positive and 64B aligned", bin_path);
+        _acceleval_fatal("data_offset must be positive and 64B aligned", bin_path);
     }
 
     // Read TensorDesc array
     TensorDesc* descs = NULL;
     if (hdr.num_tensors > 0) {
         descs = (TensorDesc*)malloc((size_t)hdr.num_tensors * sizeof(TensorDesc));
-        if (!descs) _orbench_fatal("OOM allocating TensorDesc", NULL);
+        if (!descs) _acceleval_fatal("OOM allocating TensorDesc", NULL);
         if (fread(descs, sizeof(TensorDesc), (size_t)hdr.num_tensors, f) != (size_t)hdr.num_tensors) {
             fclose(f);
             free(descs);
-            _orbench_fatal("Failed to read TensorDesc array", bin_path);
+            _acceleval_fatal("Failed to read TensorDesc array", bin_path);
         }
     }
 
@@ -142,12 +142,12 @@ static TaskData load_input_bin(const char* bin_path) {
     ParamEntry* params = NULL;
     if (hdr.num_params > 0) {
         params = (ParamEntry*)malloc((size_t)hdr.num_params * sizeof(ParamEntry));
-        if (!params) _orbench_fatal("OOM allocating ParamEntry", NULL);
+        if (!params) _acceleval_fatal("OOM allocating ParamEntry", NULL);
         if (fread(params, sizeof(ParamEntry), (size_t)hdr.num_params, f) != (size_t)hdr.num_params) {
             fclose(f);
             free(descs);
             free(params);
-            _orbench_fatal("Failed to read ParamEntry array", bin_path);
+            _acceleval_fatal("Failed to read ParamEntry array", bin_path);
         }
     }
 
@@ -155,47 +155,47 @@ static TaskData load_input_bin(const char* bin_path) {
     data.num_inputs = hdr.num_tensors;
     if (hdr.num_tensors > 0) {
         data.inputs = (Tensor*)calloc((size_t)hdr.num_tensors, sizeof(Tensor));
-        if (!data.inputs) _orbench_fatal("OOM allocating Tensor list", NULL);
+        if (!data.inputs) _acceleval_fatal("OOM allocating Tensor list", NULL);
     }
 
     for (int i = 0; i < hdr.num_tensors; i++) {
         TensorDesc* td = &descs[i];
-        int elem_size = _orbench_dtype_size(td->dtype);
+        int elem_size = _acceleval_dtype_size(td->dtype);
         if (elem_size == 0) {
             fclose(f);
             free(descs);
             free(params);
-            _orbench_fatal("Unsupported dtype in TensorDesc", td->name);
+            _acceleval_fatal("Unsupported dtype in TensorDesc", td->name);
         }
         if (td->size_bytes != td->count * (int64_t)elem_size) {
             fclose(f);
             free(descs);
             free(params);
-            _orbench_fatal("TensorDesc size_bytes mismatch", td->name);
+            _acceleval_fatal("TensorDesc size_bytes mismatch", td->name);
         }
 
         void* buf = malloc((size_t)td->size_bytes);
-        if (!buf) _orbench_fatal("OOM allocating tensor buffer", td->name);
+        if (!buf) _acceleval_fatal("OOM allocating tensor buffer", td->name);
 
         if (fseek(f, (long)td->offset, SEEK_SET) != 0) {
             fclose(f);
             free(buf);
             free(descs);
             free(params);
-            _orbench_fatal("Failed to seek to tensor offset", td->name);
+            _acceleval_fatal("Failed to seek to tensor offset", td->name);
         }
         if (fread(buf, 1, (size_t)td->size_bytes, f) != (size_t)td->size_bytes) {
             fclose(f);
             free(buf);
             free(descs);
             free(params);
-            _orbench_fatal("Failed to read tensor raw data", td->name);
+            _acceleval_fatal("Failed to read tensor raw data", td->name);
         }
 
         // Copy name into a malloc'ed stable string (so td can be freed)
         size_t nlen = strnlen(td->name, 32);
         char* name_copy = (char*)malloc(nlen + 1);
-        if (!name_copy) _orbench_fatal("OOM allocating tensor name", NULL);
+        if (!name_copy) _acceleval_fatal("OOM allocating tensor name", NULL);
         memcpy(name_copy, td->name, nlen);
         name_copy[nlen] = '\0';
 
@@ -209,12 +209,12 @@ static TaskData load_input_bin(const char* bin_path) {
     data.num_params = hdr.num_params;
     if (hdr.num_params > 0) {
         data.params = (OrbenchParamKV*)calloc((size_t)hdr.num_params, sizeof(*data.params));
-        if (!data.params) _orbench_fatal("OOM allocating params list", NULL);
+        if (!data.params) _acceleval_fatal("OOM allocating params list", NULL);
     }
     for (int i = 0; i < hdr.num_params; i++) {
         size_t klen = strnlen(params[i].key, 32);
         char* key_copy = (char*)malloc(klen + 1);
-        if (!key_copy) _orbench_fatal("OOM allocating param key", NULL);
+        if (!key_copy) _acceleval_fatal("OOM allocating param key", NULL);
         memcpy(key_copy, params[i].key, klen);
         key_copy[klen] = '\0';
 
@@ -231,7 +231,7 @@ static TaskData load_input_bin(const char* bin_path) {
 static void load_requests(const char* txt_path, char** requests, int* count) {
     *count = 0;
     FILE* f = fopen(txt_path, "r");
-    if (!f) _orbench_fatal("Cannot open requests.txt", txt_path);
+    if (!f) _acceleval_fatal("Cannot open requests.txt", txt_path);
 
     char line[256];
     while (fgets(line, sizeof(line), f)) {
@@ -243,7 +243,7 @@ static void load_requests(const char* txt_path, char** requests, int* count) {
         }
         if (n == 0) continue;
         char* s = (char*)malloc(n + 1);
-        if (!s) _orbench_fatal("OOM allocating request string", NULL);
+        if (!s) _acceleval_fatal("OOM allocating request string", NULL);
         memcpy(s, line, n + 1);
         requests[*count] = s;
         (*count)++;
@@ -313,6 +313,6 @@ static float* get_tensor_float(const TaskData* data, const char* name) {
 } // extern "C"
 #endif
 
-#endif // ORBENCH_IO_H
+#endif // ACCELEVAL_IO_H
 
 

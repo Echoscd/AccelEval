@@ -96,7 +96,7 @@ static void KerCalcBeginEndCell(int N, const int* sorted_cell_ids,
 
 // ===== Public interface =====
 
-static void _orbench_old_init(int N,
+static void _acceleval_old_init(int N,
                    const float* xs, const float* ys, const float* zs,
                    float cell_size, int grid_nx, int grid_ny, int grid_nz)
 {
@@ -110,7 +110,7 @@ static void _orbench_old_init(int N,
     g_grid_nz = grid_nz;
 }
 
-static void _orbench_old_compute(int N, int num_cells,
+static void _acceleval_old_compute(int N, int num_cells,
                       int* sorted_indices, int* cell_begin, int* cell_end)
 {
     int i;
@@ -142,6 +142,6 @@ static void _orbench_old_compute(int N, int num_cells,
 
 // ── Unified compute_only wrapper (auto-migrated) ──
 void solution_compute(int N, const float* xs, const float* ys, const float* zs, float cell_size, int grid_nx, int grid_ny, int grid_nz, int num_cells, int* sorted_indices, int* cell_begin, int* cell_end) {
-    _orbench_old_init(N, xs, ys, zs, cell_size, grid_nx, grid_ny, grid_nz);
-    _orbench_old_compute(N, num_cells, sorted_indices, cell_begin, cell_end);
+    _acceleval_old_init(N, xs, ys, zs, cell_size, grid_nx, grid_ny, grid_nz);
+    _acceleval_old_compute(N, num_cells, sorted_indices, cell_begin, cell_end);
 }

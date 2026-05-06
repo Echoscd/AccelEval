@@ -12,7 +12,7 @@ import multiprocessing as mp
 from dataclasses import dataclass, asdict
 from typing import Optional
 
-from .task import load_task, load_all_tasks, ORBENCH_ROOT
+from .task import load_task, load_all_tasks, ACCELEVAL_ROOT
 from .compile import compile_solution
 from .validate import validate_output, data_exists, ValidationResult
 from .benchmark import benchmark_solution, BenchmarkResult
@@ -210,7 +210,7 @@ def batch_eval(
         else:
             mp.set_start_method("spawn")
 
-    run_dir = os.path.join(ORBENCH_ROOT, "runs", run_name)
+    run_dir = os.path.join(ACCELEVAL_ROOT, "runs", run_name)
     # Always write to a fresh results file for each invocation (no SKIP-by-existing).
     # Name includes date/time for easy experiment tracking.
     ts = time.strftime("%Y%m%d_%H%M%S", time.localtime())
@@ -240,7 +240,7 @@ def batch_eval(
                 work_list.append((task_id, sample_path, sample_id))
 
     print(f"{'='*60}")
-    print(f"  ORBench Batch Evaluation")
+    print(f"  AccelEval Batch Evaluation")
     print(f"  Run: {run_name}")
     print(f"  Tasks: {len(task_ids)}")
     print(f"  Samples to evaluate: {len(work_list)}")
@@ -315,7 +315,7 @@ def batch_eval(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="ORBench Batch Evaluation")
+    parser = argparse.ArgumentParser(description="AccelEval Batch Evaluation")
     parser.add_argument("--run", required=True, help="Run name")
     parser.add_argument("--tasks", nargs="*", default=None, help="Task IDs to evaluate")
     parser.add_argument("--arch", default="sm_89")

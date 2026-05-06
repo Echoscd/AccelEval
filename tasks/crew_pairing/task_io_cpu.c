@@ -7,7 +7,7 @@
 //        framework/harness_cpu.c tasks/crew_pairing/task_io_cpu.c
 //        tasks/crew_pairing/cpu_reference.c -o solution_cpu -lm
 
-#include "orbench_io.h"
+#include "acceleval_io.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

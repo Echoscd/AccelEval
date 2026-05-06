@@ -235,7 +235,7 @@ static long long Solve(void) {
 
 // ===== Public interface =====
 
-static void _orbench_old_init(int  num_nodes,
+static void _acceleval_old_init(int  num_nodes,
                    int  num_arcs,       // E user arcs
                    const int* tails,    // [E]
                    const int* heads,    // [E]
@@ -301,13 +301,13 @@ static void _orbench_old_init(int  num_nodes,
     g_active_top   = 0;
 }
 
-static void _orbench_old_compute(int num_nodes, int* max_flow_out)
+static void _acceleval_old_compute(int num_nodes, int* max_flow_out)
 {
     *max_flow_out = (int)Solve();
 }
 
 // ── Unified compute_only wrapper (auto-migrated) ──
 void solution_compute(int num_nodes, int num_arcs, const int* tails, const int* heads, const int* caps, int source, int sink, int* max_flow_out) {
-    _orbench_old_init(num_nodes, num_arcs, tails, heads, caps, source, sink);
-    _orbench_old_compute(num_nodes, max_flow_out);
+    _acceleval_old_init(num_nodes, num_arcs, tails, heads, caps, source, sink);
+    _acceleval_old_compute(num_nodes, max_flow_out);
 }

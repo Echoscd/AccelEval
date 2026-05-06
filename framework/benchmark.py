@@ -96,7 +96,7 @@ def get_gpu_name(device_id: int = 0) -> str:
 
 def run_cpu_baseline(task_id: str, data_dir: str = None) -> float:
     """
-    ORBench v2: Read CPU baseline time from cpu_time_ms.txt in data_dir.
+    AccelEval v2: Read CPU baseline time from cpu_time_ms.txt in data_dir.
     """
     task_dir = get_task_dir(task_id)
     # Find data_dir if not provided
@@ -197,8 +197,8 @@ def benchmark_solution(
     # Pick a data size for benchmarking.
     #
     # Preference order:
-    #   1) ORBENCH_BENCHMARK_SIZES env (comma-separated list, e.g. "small,medium")
-    #   2) ORBENCH_VALIDATE_SIZES env (to stay consistent with validation)
+    #   1) ACCELEVAL_BENCHMARK_SIZES env (comma-separated list, e.g. "small,medium")
+    #   2) ACCELEVAL_VALIDATE_SIZES env (to stay consistent with validation)
     #   3) Default: ["large", "medium", "small"]
     #
     # For each candidate size, require:
@@ -206,7 +206,7 @@ def benchmark_solution(
     #   - cpu_time_ms.txt exists (CPU baseline)
     import os as _os
 
-    sizes_env = _os.environ.get("ORBENCH_BENCHMARK_SIZES") or _os.environ.get("ORBENCH_VALIDATE_SIZES")
+    sizes_env = _os.environ.get("ACCELEVAL_BENCHMARK_SIZES") or _os.environ.get("ACCELEVAL_VALIDATE_SIZES")
     if sizes_env:
         size_candidates = [s.strip() for s in sizes_env.split(",") if s.strip()]
     else:

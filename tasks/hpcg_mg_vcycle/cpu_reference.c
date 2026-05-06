@@ -147,7 +147,7 @@ static void mg_vcycle(int level_idx, const double *rhs, double *x) {
     symgs(L, rhs, x);
 }
 
-static void _orbench_old_init(int nx, int ny, int nz, int coarse_levels,
+static void _acceleval_old_init(int nx, int ny, int nz, int coarse_levels,
                    int n, const int *row_ptr, const int *col_idx,
                    const double *values, const int *diag_idx,
                    const double *rhs) {
@@ -204,13 +204,13 @@ static void _orbench_old_init(int nx, int ny, int nz, int coarse_levels,
     }
 }
 
-static void _orbench_old_compute(double *x_inout) {
+static void _acceleval_old_compute(double *x_inout) {
     if (!g_levels) return;
     mg_vcycle(0, g_rhs0, x_inout);
 }
 
 // ── Unified compute_only wrapper (auto-migrated) ──
 void solution_compute(int nx, int ny, int nz, int coarse_levels, int n, const int * row_ptr, const int * col_idx, const double * values, const int * diag_idx, const double * rhs, double * x_inout) {
-    _orbench_old_init(nx, ny, nz, coarse_levels, n, row_ptr, col_idx, values, diag_idx, rhs);
-    _orbench_old_compute(x_inout);
+    _acceleval_old_init(nx, ny, nz, coarse_levels, n, row_ptr, col_idx, values, diag_idx, rhs);
+    _acceleval_old_compute(x_inout);
 }

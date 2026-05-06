@@ -7,7 +7,7 @@ Outputs:
 - agent_metrics.png (if matplotlib available)
 
 Usage:
-  python3 -m ORBench.framework.agent.plot_metrics /path/to/agent_multiturn_summary.json
+  python3 -m AccelEval.framework.agent.plot_metrics /path/to/agent_multiturn_summary.json
 """
 
 from __future__ import annotations
@@ -215,7 +215,7 @@ def plot_png(metrics: List[TurnMetrics], out_path: Path, title: str) -> bool:
 
 def main(argv: List[str]) -> int:
     if len(argv) != 2:
-        print("Usage: python3 -m ORBench.framework.agent.plot_metrics /path/to/agent_multiturn_summary.json")
+        print("Usage: python3 -m AccelEval.framework.agent.plot_metrics /path/to/agent_multiturn_summary.json")
         return 2
 
     summary_path = Path(argv[1]).resolve()
