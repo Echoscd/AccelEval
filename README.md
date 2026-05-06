@@ -10,9 +10,11 @@ across **42 production-style workloads** drawn from established HPC suites
 scientific codes (DualSPHysics, Box2D), and industrial financial /
 operations-research workloads (FinanceBench, OR-Tools, recent OR papers).
 
-- 📦 **Test data**: anonymous Hugging Face dataset (link inside the
-  submission). To use a different copy, set `ACCELEVAL_HF_REPO=<org>/<repo>`
-  before running `scripts/download_data.py`.
+- 📦 **Test data**:
+  [`Accel-Eval/AccelEval-data`](https://huggingface.co/datasets/Accel-Eval/AccelEval-data)
+  on Hugging Face — input binaries, expected outputs, CPU baseline times,
+  plus a `tasks.parquet` manifest with the full `cpu_reference.c` and
+  `prompt_template.yaml` for every task.
 - 🔬 **Tasks**: 42 tasks × 3 input scales (small / medium / large)
 - 🧪 **Interface**: every task is a single `solution_compute(...)` function,
   timed end-to-end (allocation, H↔D copy, kernel, library, cleanup) so there

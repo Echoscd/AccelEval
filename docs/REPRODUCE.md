@@ -33,17 +33,18 @@ pip install -r requirements.txt huggingface_hub openpyxl
 ## 2. Download benchmark data
 
 The 42 tasks' input data + CPU-reference expected outputs + CPU baselines
-live on Hugging Face as a dataset repo. Set `ACCELEVAL_HF_REPO` to the
-namespace listed in the submission package (defaults to a placeholder),
-then pull the size you want into `tasks/<task>/data/<size>/`:
+live on Hugging Face as
+[`Accel-Eval/AccelEval-data`](https://huggingface.co/datasets/Accel-Eval/AccelEval-data).
+Pull the size you want into `tasks/<task>/data/<size>/`:
 
 ```bash
-export ACCELEVAL_HF_REPO=<org>/<dataset>     # see the submission package
 python3 scripts/download_data.py small       # ~30 MB,   smoke test
 python3 scripts/download_data.py medium      # ~1.2 GB,  the leaderboard size
 python3 scripts/download_data.py large       # ~3.4 GB,  scale-stress
 # or all three:
 python3 scripts/download_data.py all
+# To use a different mirror or fork:
+#   ACCELEVAL_HF_REPO=<org>/<dataset> python3 scripts/download_data.py small
 ```
 
 After this, every active task has `tasks/<task>/data/<size>/{input.bin,
@@ -53,7 +54,7 @@ Optionally, download the model-generated solutions and the current
 leaderboard / strategy-transfer xlsx files for inspection:
 
 ```bash
-huggingface-cli download $ACCELEVAL_HF_REPO solutions.tar.gz \
+huggingface-cli download Accel-Eval/AccelEval-data solutions.tar.gz \
     leaderboard.xlsx stage1_vs_stage2.xlsx --repo-type dataset \
     --local-dir reference_artifacts/
 ```
