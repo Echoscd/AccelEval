@@ -7,16 +7,21 @@ Usage:
   pip install huggingface_hub
   huggingface-cli login        # needs a write-access token from hf.co/settings/tokens
 
-  # Upload:
-  python3 scripts/upload_to_hf.py --repo-id <org>/acceleval-data
+  # Upload to the canonical repo (default: Accel-Eval/AccelEval-data):
+  python3 scripts/upload_to_hf.py
+
+  # Or override (e.g. when forking the dataset):
+  python3 scripts/upload_to_hf.py --repo-id <org>/<dataset>
+  ACCELEVAL_HF_REPO=<org>/<dataset> python3 scripts/upload_to_hf.py
 
   # Only upload one size:
-  python3 scripts/upload_to_hf.py --repo-id <org>/acceleval-data --size small
+  python3 scripts/upload_to_hf.py --size small
 """
 import argparse, os, glob, tarfile, sys, json, hashlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_REPO = os.environ.get("ACCELEVAL_HF_REPO", "Accel-Eval/AccelEval-data")
 
 # Files we distribute (exclude transient output.txt, timing.json, etc.)
 DATA_FILES = ("input.bin", "expected_output.txt", "cpu_time_ms.txt", "requests.txt")
@@ -113,8 +118,8 @@ def upload(repo_id: str, files: list, private: bool = False):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--repo-id", required=True,
-                    help="HuggingFace dataset repo id, e.g. yourname/acceleval-data")
+    ap.add_argument("--repo-id", default=DEFAULT_REPO,
+                    help=f"HuggingFace dataset repo id (default: {DEFAULT_REPO})")
     ap.add_argument("--size", choices=["small", "medium", "large", "all"],
                     default="all")
     ap.add_argument("--private", action="store_true")

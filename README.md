@@ -130,7 +130,6 @@ AccelEval/
 │   ├── compute_passk.py            # pass@k aggregates from a single k-sample run
 │   ├── plot_pattern_cooccurrence.py / plot_scale_*.py
 │   └── run_human_baselines.sh
-├── compare/                # Snapshots of related-work benchmark code (KernelBench, ParEval, ...)
 ├── docs/                   # REPRODUCE.md, task_porting_guide.md
 └── runs/                   # Generated solutions + eval results (gitignored)
 ```
