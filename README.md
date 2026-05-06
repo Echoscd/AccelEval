@@ -122,10 +122,10 @@ AccelEval/
 │   ├── gen_all_data.sh / gen_data.sh
 │   ├── run_all_tasks.py / run_dual_gpu_clean_eval.sh / clean_eval_*.sh
 │   ├── consolidate_eval_data.py    # Build per-(model, task, size) leaderboard JSON
-│   ├── export_xlsx.py / export_xlsx_from_consolidated.py / export_pass3_xlsx.py
+│   ├── export_xlsx.py / export_xlsx_from_consolidated.py
 │   ├── analyze_pattern_impact.py   # Per-pattern within-task LIFT
 │   ├── analyze_s2_control.py       # Strategy-transfer ablation (treatment vs control)
-│   ├── merge_pass3.py              # pass@1 + pass@2 → pass@3 oracle
+│   ├── compute_passk.py            # pass@k aggregates from a single k-sample run
 │   ├── plot_pattern_cooccurrence.py / plot_scale_*.py
 │   └── run_human_baselines.sh
 ├── compare/                # Snapshots of related-work benchmark code (KernelBench, ParEval, ...)
@@ -143,9 +143,8 @@ python3 run.py eval --run runs/<model>_<config>_<date> --sizes medium
 python3 scripts/consolidate_eval_data.py
 python3 scripts/export_xlsx_from_consolidated.py
 
-# Best-of-k pass@3 leaderboard (after generating 3 samples per task)
-python3 scripts/merge_pass3.py
-python3 scripts/export_pass3_xlsx.py
+# Best-of-k pass@k leaderboard (after generating k samples per task in ONE run)
+python3 scripts/compute_passk.py --runs runs/<model>_<config>_<date> --k 3
 
 # Decomposition pipeline: pattern attribution + LIFT analysis
 python3 scripts/analyze_pattern_impact.py
