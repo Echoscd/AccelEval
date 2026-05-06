@@ -52,3 +52,6 @@ Library/
 *.png
 Untitled
 task_progress.csv
+
+# compare/ — third-party benchmark snapshots, kept locally only
+compare/

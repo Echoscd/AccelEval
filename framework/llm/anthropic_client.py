@@ -16,7 +16,7 @@ class AnthropicClient(BaseLLMClient):
         import anthropic
 
         client = anthropic.Anthropic(api_key=self.api_key)
-        max_tok = max_tokens or self.model.get("max_tokens", 8192)
+        max_tok = max_tokens or self.model.get("max_tokens", 32768)
 
         t0 = time.monotonic()
         message = client.messages.create(

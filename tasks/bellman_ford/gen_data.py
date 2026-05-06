@@ -157,14 +157,15 @@ def main():
         params={"V": V, "E": E},
     )
 
-    # 3) Generate requests: (s, t) pairs
-    # s 分 10 组，每组 10 个不同的 s，每个 s 配 10 个不同的 t，共 100 条
+    # 3) Generate requests: (s, t) pairs.
+    # 10 distinct source vertices; each source paired with 10 distinct targets,
+    # for 100 (s, t) requests total.
     rng = np.random.default_rng(seed)
     with open(out_dir / "requests.txt", "w") as f:
-        # 生成 10 个不同的 s（每组一个）
+        # Sample 10 distinct sources (one per group).
         s_group = rng.integers(0, V, size=10, dtype=np.int32)
         for s in s_group:
-            # 每个 s 配 10 个不同的 t
+            # For each source, sample 10 distinct targets.
             t_list = rng.integers(0, V, size=10, dtype=np.int32)
             for t in t_list:
                 f.write(f"{int(s)} {int(t)}\n")

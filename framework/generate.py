@@ -51,7 +51,7 @@ def extract_cuda_code(response_text: str) -> str:
 #  Legacy API callers (kept for backward compatibility)
 # ═══════════════════════════════════════════════════════════════
 
-def call_anthropic(model: str, prompt: str, api_key: str, max_tokens: int = 8192) -> str:
+def call_anthropic(model: str, prompt: str, api_key: str, max_tokens: int = 32768) -> str:
     """Call Anthropic API (legacy)."""
     import anthropic
 
@@ -64,7 +64,7 @@ def call_anthropic(model: str, prompt: str, api_key: str, max_tokens: int = 8192
     return message.content[0].text
 
 
-def call_openai(model: str, prompt: str, api_key: str, api_base: str = None, max_tokens: int = 8192) -> str:
+def call_openai(model: str, prompt: str, api_key: str, api_base: str = None, max_tokens: int = 32768) -> str:
     """Call OpenAI-compatible API (legacy)."""
     from openai import OpenAI
 
@@ -77,7 +77,7 @@ def call_openai(model: str, prompt: str, api_key: str, api_base: str = None, max
     return response.choices[0].message.content
 
 
-def call_llm(model: str, prompt: str, api_key: str, api_base: str = None, max_tokens: int = 8192) -> str:
+def call_llm(model: str, prompt: str, api_key: str, api_base: str = None, max_tokens: int = 32768) -> str:
     """Dispatch to the appropriate LLM API based on model name (legacy)."""
     if "claude" in model.lower():
         return call_anthropic(model, prompt, api_key, max_tokens)
@@ -196,7 +196,7 @@ def generate_with_registry(
         )
 
         model_cfg = registry.get_model_config(model_id)
-        max_tokens = model_cfg.get("max_tokens", 8192)
+        max_tokens = model_cfg.get("max_tokens", 32768)
 
         response = resilient.generate(prompt, max_tokens=max_tokens, temperature=temperature)
         code = extract_cuda_code(response.content)

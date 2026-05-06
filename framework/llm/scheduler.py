@@ -106,7 +106,11 @@ class GenerationScheduler:
     # ── Path helpers ─────────────────────────────────────────
 
     def _run_name(self, job: GenerationJob) -> str:
-        suffix = "s2" if self.guidance_dir else ""
+        if self.guidance_dir:
+            base = os.path.basename(self.guidance_dir.rstrip("/"))
+            suffix = "s2c" if base.endswith("_control") else "s2"
+        else:
+            suffix = ""
         return f"{job.model_id}_l{job.level}{suffix}_{self._date_tag}"
 
     def _load_guidance(self, task_id: str) -> Optional[str]:
@@ -158,7 +162,7 @@ class GenerationScheduler:
             provider = model_cfg["provider"]
             client = self.registry.get_client(job.model_id)
             retry_cfg = self.registry.get_retry_config(job.model_id)
-            max_tok = model_cfg.get("max_tokens", 8192)
+            max_tok = model_cfg.get("max_tokens", 32768)
 
             resilient = ResilientLLMClient(
                 client,

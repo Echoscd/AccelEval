@@ -346,7 +346,7 @@ def generate_diff(
 
     resp = llm_client.generate(
         prompt=f"{system}\n\n{user}",
-        max_tokens=16000,
+        max_tokens=32768,
         temperature=0.0,
     )
     raw_content = resp.content or ""

@@ -491,7 +491,7 @@ def call_llm(
     system: str,
     user_prompt: str,
     logger: AgentLogger,
-    max_tokens: int = 65536,
+    max_tokens: int = 32768,
     temperature: float = 0.4,
 ) -> LLMResponse:
     """

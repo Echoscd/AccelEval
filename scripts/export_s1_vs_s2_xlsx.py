@@ -246,22 +246,28 @@ def main():
         ws.column_dimensions[get_column_letter(c)].width = 14
     ws.freeze_panes = "B2"
 
-    # Aggregate row across the 7 S2 models
+    # Aggregate row across the 7 RECIPIENT S2 models (excluding Gemini 3.1 Pro,
+    # which is the dominant recipe provider; including its self-loop would
+    # contaminate the aggregate).
+    GEMINI = "Gemini 3.1 Pro"
+    recipients = [m for m in S2 if m != GEMINI]
     all_lifts = []
-    for m in S2:
+    for m in recipients:
         s1 = s1_data[m]; s2 = s2_data[m]
         for t in tasks:
             sp1 = speedup(s1.get(t)); sp2 = speedup(s2.get(t))
             if sp1 and sp2: all_lifts.append(sp2 / sp1)
-    # Aggregate PAR-GM across S1 vs S2 over the 7 S2 models on all paired tasks
+    # Aggregate PAR-GM across S1 vs S2 over the 7 recipient models, only on
+    # paired tasks (where both stages passed), to keep the S1/S2 PAR pools
+    # comparable.
     s1_par_pool, s2_par_pool = [], []
-    for m in s2_models_only:
+    for m in recipients:
         for t in tasks:
             sp1 = speedup(s1_data[m].get(t))
             sp2 = speedup(s2_data[m].get(t))
-            if best_s1.get(t):
-                if sp1: s1_par_pool.append(sp1 / best_s1[t])
-                if sp2: s2_par_pool.append(sp2 / best_s1[t])
+            if sp1 and sp2 and best_s1.get(t):
+                s1_par_pool.append(sp1 / best_s1[t])
+                s2_par_pool.append(sp2 / best_s1[t])
     s1_par_agg = gmean(s1_par_pool)
     s2_par_agg = gmean(s2_par_pool)
 

@@ -19,15 +19,32 @@ class LLMConfig:
     """LLM API configuration"""
     model: str = "claude-sonnet-4-20250514"
     api_base: str = "https://api.anthropic.com/v1/messages"
-    max_tokens: int = 8192
+    max_tokens: int = 32768
     num_samples: int = 3
     temperature: float = 0.7
+
+
+def _detect_visible_gpus() -> int:
+    """Return the number of visible CUDA devices (defaults to 1 on detection failure)."""
+    cv = os.environ.get("CUDA_VISIBLE_DEVICES")
+    if cv is not None and cv.strip():
+        return len([x for x in cv.split(",") if x.strip()])
+    try:
+        import subprocess
+        out = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=index", "--format=csv,noheader"],
+            stderr=subprocess.DEVNULL, timeout=5,
+        ).decode().strip()
+        n = len([line for line in out.splitlines() if line.strip()])
+        return max(n, 1)
+    except Exception:
+        return 1
 
 
 @dataclass(frozen=True)
 class EvalConfig:
     """Evaluation settings"""
-    num_gpu_devices: int = 1
+    num_gpu_devices: int = field(default_factory=_detect_visible_gpus)
     num_cpu_workers: int = 8
     timeout: int = 180
     warmup: int = 3

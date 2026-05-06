@@ -94,7 +94,9 @@ def run_nsys_profile(
             os.remove(f)
 
     env = os.environ.copy()
-    env["CUDA_VISIBLE_DEVICES"] = str(device_id)
+    # Respect parent CUDA_VISIBLE_DEVICES (same rationale as benchmark._run_exe).
+    if "CUDA_VISIBLE_DEVICES" not in env:
+        env["CUDA_VISIBLE_DEVICES"] = str(device_id)
 
     # Step 1: Profile
     #TODO: Adding CPU profiling for the whole pipeline.

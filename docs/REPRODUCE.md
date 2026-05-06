@@ -25,22 +25,23 @@ nvcc --version
 ## 1. Clone & install
 
 ```bash
-git clone https://github.com/Echoscd/ORbench.git
-cd ORbench
+# Code: clone the AccelEval repo (URL given in the submission package).
+cd AccelEval
 pip install -r requirements.txt huggingface_hub openpyxl
 ```
 
 ## 2. Download benchmark data
 
-The 43 tasks' input data + CPU-reference expected outputs + CPU baselines
-live on HuggingFace as
-[`Cosmoscd/AccelEval`](https://huggingface.co/datasets/Cosmoscd/AccelEval).
-Pull the size you want into `tasks/<task>/data/<size>/`:
+The 42 tasks' input data + CPU-reference expected outputs + CPU baselines
+live on Hugging Face as a dataset repo. Set `ACCELEVAL_HF_REPO` to the
+namespace listed in the submission package (defaults to a placeholder),
+then pull the size you want into `tasks/<task>/data/<size>/`:
 
 ```bash
-python3 scripts/download_data.py small      # ~30 MB,   smoke test
-python3 scripts/download_data.py medium     # ~1.2 GB,  the leaderboard size
-python3 scripts/download_data.py large      # ~3.4 GB,  scale-stress
+export ACCELEVAL_HF_REPO=<org>/<dataset>     # see the submission package
+python3 scripts/download_data.py small       # ~30 MB,   smoke test
+python3 scripts/download_data.py medium      # ~1.2 GB,  the leaderboard size
+python3 scripts/download_data.py large       # ~3.4 GB,  scale-stress
 # or all three:
 python3 scripts/download_data.py all
 ```
@@ -48,10 +49,11 @@ python3 scripts/download_data.py all
 After this, every active task has `tasks/<task>/data/<size>/{input.bin,
 expected_output.txt, cpu_time_ms.txt, requests.txt}` populated.
 
-Optionally, download the model-generated solutions and current
-leaderboard/strategy-transfer xlsx for inspection:
+Optionally, download the model-generated solutions and the current
+leaderboard / strategy-transfer xlsx files for inspection:
+
 ```bash
-huggingface-cli download Cosmoscd/AccelEval solutions.tar.gz \
+huggingface-cli download $ACCELEVAL_HF_REPO solutions.tar.gz \
     leaderboard.xlsx stage1_vs_stage2.xlsx --repo-type dataset \
     --local-dir reference_artifacts/
 ```

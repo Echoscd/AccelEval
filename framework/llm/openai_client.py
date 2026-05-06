@@ -26,7 +26,7 @@ class OpenAIClient(BaseLLMClient):
             base_url=api_base,
             timeout=600.0,
         )
-        max_tok = max_tokens or self.model.get("max_tokens", 8192)
+        max_tok = max_tokens or self.model.get("max_tokens", 32768)
         supports_system = self.model.get("supports_system_prompt", True)
 
         messages = [{"role": "user", "content": prompt}]

@@ -5,6 +5,7 @@ Two-level timing: end-to-end (from program stdout) + nsys trace (kernel-only)
 
 import os
 import re
+import signal
 import subprocess
 import json
 import numpy as np
@@ -121,24 +122,53 @@ def run_cpu_baseline(task_id: str, data_dir: str = None) -> float:
 
 def _run_exe(exe_path: str, args: list[str] = None, timeout: int = None,
              device_id: int = 0) -> tuple[bool, str, str]:
-    """Run executable with CUDA device selection"""
+    """Run executable with CUDA device selection.
+
+    On timeout we kill the entire process group with SIGKILL so that any
+    CUDA child holding GPU memory is reaped immediately. Without this the
+    child gets reparented to init and continues to occupy a GPU slot for
+    hours, polluting subsequent timing measurements.
+    """
     # Use config default if timeout not provided
     if timeout is None:
         config = get_config()
         timeout = config.eval.timeout
-    
+
     cmd = [exe_path] + (args or [])
     env = os.environ.copy()
-    env["CUDA_VISIBLE_DEVICES"] = str(device_id)
+    # Respect parent CUDA_VISIBLE_DEVICES if the caller pinned a GPU at the
+    # process level (used by dual-worker pipelines that run two evals in
+    # parallel, one per physical GPU). Otherwise fall back to device_id.
+    if "CUDA_VISIBLE_DEVICES" not in env:
+        env["CUDA_VISIBLE_DEVICES"] = str(device_id)
 
+    proc = None
     try:
-        result = subprocess.run(
-            cmd, capture_output=True, timeout=timeout, text=True, env=env,
+        # start_new_session=True puts the child in its own process group
+        # so killpg can reach all descendants on timeout.
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            env=env, start_new_session=True,
         )
-        return result.returncode == 0, result.stdout, result.stderr
-    except subprocess.TimeoutExpired:
-        return False, "", "Timed out"
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+            return proc.returncode == 0, stdout, stderr
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                pass
+            try:
+                stdout, stderr = proc.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                stdout, stderr = "", ""
+            return False, stdout, "Timed out (process group SIGKILL'd)"
     except Exception as e:
+        if proc is not None:
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except Exception:
+                pass
         return False, "", str(e)
 
 

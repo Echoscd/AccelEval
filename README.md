@@ -1,18 +1,25 @@
-# AccelEval (ORBench)
+# AccelEval
 
-**A benchmark for evaluating LLMs on CPU-to-CUDA code acceleration**
+**A benchmark for evaluating LLMs on CPU-to-CUDA code acceleration.**
 
 AccelEval measures whether LLMs can translate sequential CPU programs into
 efficient CUDA kernels. Unlike prior benchmarks that focus on isolated GPU
-primitives (KernelBench) or pure syntax (ComputeEval), AccelEval stresses
-**end-to-end acceleration** across 43 production-style workloads — graph
-analytics, scientific computing, financial engineering, dynamic programming,
-spatial indexing, and more.
+primitives or pure syntax, AccelEval stresses **end-to-end acceleration**
+across **42 production-style workloads** drawn from established HPC suites
+(HPCG, NAS Parallel Benchmarks, Rodinia, GAPBS, miniWeather), domain-specific
+scientific codes (DualSPHysics, Box2D), and industrial financial /
+operations-research workloads (FinanceBench, OR-Tools, recent OR papers).
 
-- 📦 **Test data**: [Cosmoscd/AccelEval](https://huggingface.co/datasets/Cosmoscd/AccelEval) on HuggingFace
-- 📄 **Paper**: `docs/paper.tex` (arXiv) · `nips/neurips_2026.tex` (NeurIPS)
-- 🔬 **Tasks**: 43 tasks × 3 sizes (small/medium/large)
-- 🧪 **Interface**: single `solution_compute` that is **timed end-to-end**
+- 📦 **Test data**: anonymous Hugging Face dataset (link inside the
+  submission). To use a different copy, set `ACCELEVAL_HF_REPO=<org>/<repo>`
+  before running `scripts/download_data.py`.
+- 🔬 **Tasks**: 42 tasks × 3 input scales (small / medium / large)
+- 🧪 **Interface**: every task is a single `solution_compute(...)` function,
+  timed end-to-end (allocation, H↔D copy, kernel, library, cleanup) so there
+  is no place to hide work in an untimed setup phase.
+- 🧠 **Decomposition pipeline**: every passing solution is labelled against
+  a 43-pattern CUDA optimization catalog and fed back as natural-language
+  guidance for cross-model strategy transfer.
 
 ---
 
@@ -22,77 +29,67 @@ spatial indexing, and more.
 # 1. Install
 pip install -r requirements.txt
 
-# 2. Download benchmark data (auto-fetches from HuggingFace)
-python3 scripts/download_data.py small      # smoke (≈50 MB)
-python3 scripts/download_data.py medium     # leaderboard (≈1.8 GB)
-python3 scripts/download_data.py large      # stress (≈2.5 GB)
+# 2. Pull the benchmark data from Hugging Face
+python3 scripts/download_data.py small      # smoke (~50 MB)
+python3 scripts/download_data.py medium     # leaderboard (~1.8 GB)
+python3 scripts/download_data.py large      # stress (~2.5 GB)
 
-# 3. Configure API keys
-cp .env.example .env    # edit with OPENROUTER_API_KEY / ANTHROPIC_API_KEY etc.
+# 3. Configure API keys (.env): OPENROUTER_API_KEY, ANTHROPIC_API_KEY, ...
+cp .env.example .env
 
-# 4. One-shot: generate + evaluate + analyze
-python3 -m framework.run_all_tasks \
+# 4. Generate + evaluate + analyze for one model
+python3 scripts/run_all_tasks.py \
     --models gemini-3.1-pro-preview-openrouter \
     --levels 3 --samples 1 --sizes small --yes
 ```
 
-Results land in `runs/<model>_l<level>_<timestamp>/` and a consolidated
-JSON in `runs/reports/all_results_<timestamp>.json`.
-
-## Current leaderboard (L3, 44 tasks, **medium** size)
-
-| Rank | Model | Pass | Median Speedup | fast@10× |
-|:-:|---|---:|---:|---:|
-| 🥇 | **Gemini 3.1 Pro** | **94.9%** | **33×** | **64.1%** |
-| 🥈 | GLM 5.1 | 91.7% | 10× | 47.2% |
-| 🥉 | DeepSeek V3.2 | 89.7% | 7× | 27.6% |
-| 4 | Claude Opus 4.6 | 87.2% | 18× | 46.2% |
-| 5 | Kimi K2.5 | 84.8% | 14× | 45.5% |
-| 6 | Qwen 3.6 Plus | 84.2% | 17× | 47.4% |
-| 7 | GPT-5.4 | 73.5% | 19× | 44.1% |
-
-Regenerate with `python3 scripts/export_xlsx.py` after new runs.
+Solutions and per-cell results are written to
+`runs/<model>_l<level>_<timestamp>/`; consolidated leaderboards land in
+`runs/reports/`.
 
 ## Task categories
 
-| Category | Tasks |
-|----------|------|
-| Dynamic programming | `bellman_ford`, `held_karp_tsp`, `inventory_replenishment_dp`, `pathfinder_grid_dp`, `network_rm_dp`, `hawkes_dynamic_pricing_hjb`, `robust_value_iteration_hypercube`, `self_exciting_pricing_dp`, `gittins_index` |
-| Graph analytics | `gapbs_pagerank_pullgs`, `gapbs_triangle_orderedcount`, `gapbs_cc_afforest`, `rodinia_bfs_levels`, `max_flow_push_relabel` |
-| Sparse linear algebra | `hpcg_spmv_27pt`, `hpcg_symgs_sweep`, `hpcg_mg_vcycle`, `npb_cg_sparse_solve`, `spmv_csr` |
-| CFD / Stencil | `hotspot_2d`, `miniWeather`, `npb_lu_ssor_structured`, `npb_sp_adi_pentadiagonal` |
-| Financial computing | `black_scholes`, `bonds_pricing`, `monte_carlo`, `repo_pricing`, `batched_lhpca_portfolio` |
-| Fluid simulation | `sph_position`, `sph_cell_index`, `sph_forces` |
-| Distance / clustering | `euclidean_distance_matrix`, `hausdorff_distance`, `dtw_distance`, `dbscan` |
-| Optimization | `crew_pairing`, `pdlp`, `motzkin_straus_blp_eval` |
-| Stochastic / automata | `thompson_sampling`, `regex_match` |
-| Bioinformatics | `smith_waterman` |
-| Transportation | `nash_flows_over_time` |
-| Geometry | `collision_detection` |
+42 tasks across six top-level categories:
 
-## Unified `compute_only` interface
+| Category | Count | Examples |
+|---|---:|---|
+| HPC reference kernels    | 7  | `hpcg_spmv_27pt`, `hpcg_symgs_sweep`, `hpcg_mg_vcycle`, `npb_cg_sparse_solve`, `npb_lu_ssor_structured`, `npb_sp_adi_pentadiagonal`, `miniWeather` |
+| Scientific simulation    | 4  | `sph_cell_index`, `sph_forces`, `sph_position`, `hotspot_2d` |
+| Graph algorithms         | 7  | `bellman_ford`, `held_karp_tsp`, `max_flow_push_relabel`, `rodinia_bfs_levels`, `gapbs_cc_afforest`, `gapbs_pagerank_pullgs`, `gapbs_triangle_orderedcount` |
+| Spatial–temporal         | 7  | `dbscan`, `dtw_distance`, `euclidean_distance_matrix`, `hausdorff_distance`, `collision_detection`, `smith_waterman`, `regex_match` |
+| Financial computing      | 5  | `black_scholes`, `bonds_pricing`, `monte_carlo`, `repo_pricing`, `batched_lhpca_portfolio` |
+| Operations research      | 12 | `crew_pairing`, `gittins_index`, `hawkes_dynamic_pricing_hjb`, `inventory_replenishment_dp`, `motzkin_straus_blp_eval`, `nash_flows_over_time`, `network_rm_dp`, `pathfinder_grid_dp`, `pdlp`, `robust_value_iteration_hypercube`, `self_exciting_pricing_dp`, `thompson_sampling` |
 
-Every task exposes a **single** function:
+The full per-task manifest (source repo, brief description) is in
+`tasks/<task_id>/task.json`.
+
+## Unified `solution_compute` interface
+
+Every task exposes a single function:
 
 ```c
 extern "C" void solution_compute(
-    /* inputs */ int N, const float* xs, const float* ys, float eps, int minPts,
-    /* output */ int* labels);
+    /* inputs */  int N, const float* xs, const float* ys, float eps, int minPts,
+    /* output */  int* labels);
 ```
 
-The harness passes full host-side inputs every call; the LLM's code must
-do H2D copy + kernel launch + D2H copy and synchronize before returning.
-`solution_compute` is called with warmup + timed trials — it must be
-idempotent. The full wall time of each call is measured via CUDA Events,
-so there is no way to hide work in an untimed init phase.
+The harness passes full host-side inputs every call; the LLM-generated CUDA
+must do H2D copy + kernel launch + D2H copy and synchronise before
+returning. `solution_compute` is called with three warmups and five timed
+trials; the **full wall time of every call is measured via CUDA Events**, so
+allocation cost cannot be hidden in an untimed `init()` phase.
+
+An automated audit (`solution_compute` is called repeatedly with cleared
+device state) detects timing-loophole exploits such as static device
+pointers that survive across calls.
 
 ## Prompt levels
 
 | Level | Includes | Purpose |
-|-------|----------|------|
+|-------|----------|---------|
 | L1 | Task + interface + CPU code + **full optimization guide** | Ceiling with scaffolding |
-| L2 | Task + interface + CPU code + brief hints | Optimization selection |
-| L3 | Task + interface + CPU code only | Autonomous capability |
+| L2 | Task + interface + CPU code + brief hints                | Optimization selection |
+| L3 | Task + interface + CPU code only                          | Autonomous capability (default) |
 
 Prompts assemble from `tasks/<id>/prompt_template.yaml` via
 `framework/generate_prompt.py`.
@@ -101,84 +98,92 @@ Prompts assemble from `tasks/<id>/prompt_template.yaml` via
 
 ```
 AccelEval/
-├── run.py                  # Legacy CLI (single-model / single-task)
+├── run.py                  # CLI entry-point (single model / single task)
 ├── framework/
-│   ├── run_all_tasks.py    # Recommended: generate → eval → analyze
-│   ├── compile.py          # nvcc compilation (auto-injects weak solution_free)
-│   ├── benchmark.py        # CUDA Event timing
-│   ├── validate.py         # Output comparison
-│   ├── generate_prompt.py  # L1/L2/L3 prompt assembly
-│   ├── llm/                # Multi-provider clients (OpenAI/Anthropic/OpenRouter/...)
+│   ├── benchmark.py        # CUDA-Event end-to-end timing
+│   ├── compile.py          # nvcc compile (auto-injects weak solution_free)
+│   ├── validate.py         # Output comparison (per-task tolerance)
+│   ├── generate.py         # LLM dispatcher
+│   ├── generate_prompt.py  # L1 / L2 / L3 prompt assembly
+│   ├── run_all_tasks.py    # Generate → eval → analyze pipeline
+│   ├── llm/                # Provider clients (OpenAI, Anthropic, Google, OpenRouter)
+│   ├── knowledge/          # Pattern decomposition + LLM analyzer
 │   └── harness_{gpu,cpu}.{cu,c}   # Timing + validation skeleton
-├── tasks/
-│   └── <task>/
-│       ├── task.json               # Metadata: category, difficulty, sizes, tolerance
-│       ├── prompt_template.yaml    # Task description + interface + hints
-│       ├── cpu_reference.c         # CPU baseline
-│       ├── task_io.{cu,c}          # I/O adapter (framework-internal)
-│       ├── gen_data.py             # Generate input.bin + expected_output.txt
-│       └── data/{small,medium,large}/   # ← download via scripts/download_data.py
+├── tasks/<task_id>/
+│   ├── task.json               # Metadata: category, difficulty, sizes, tolerance
+│   ├── prompt_template.yaml    # Task description + interface + hints
+│   ├── cpu_reference.c         # CPU baseline
+│   ├── task_io.{cu,c}          # I/O adapter
+│   ├── gen_data.py             # Generate input.bin + expected_output.txt
+│   └── data/{small,medium,large}/   # ← `python3 scripts/download_data.py`
 ├── scripts/
-│   ├── download_data.py            # Pull test data from HuggingFace
+│   ├── download_data.py            # Pull benchmark data from Hugging Face
 │   ├── upload_to_hf.py             # Maintainer: push data to HF
-│   ├── migrate_to_compute_only.py  # One-off migration tool
-│   └── export_xlsx.py              # Build leaderboard xlsx from eval_results
-├── docs/                           # Paper drafts
-├── nips/                           # NeurIPS 2026 submission template
-└── runs/                           # Generated code + eval results (gitignored)
+│   ├── gen_all_data.sh / gen_data.sh
+│   ├── run_all_tasks.py / run_dual_gpu_clean_eval.sh / clean_eval_*.sh
+│   ├── consolidate_eval_data.py    # Build per-(model, task, size) leaderboard JSON
+│   ├── export_xlsx.py / export_xlsx_from_consolidated.py / export_pass3_xlsx.py
+│   ├── analyze_pattern_impact.py   # Per-pattern within-task LIFT
+│   ├── analyze_s2_control.py       # Strategy-transfer ablation (treatment vs control)
+│   ├── merge_pass3.py              # pass@1 + pass@2 → pass@3 oracle
+│   ├── plot_pattern_cooccurrence.py / plot_scale_*.py
+│   └── run_human_baselines.sh
+├── compare/                # Snapshots of related-work benchmark code (KernelBench, ParEval, ...)
+├── docs/                   # REPRODUCE.md, task_porting_guide.md
+└── runs/                   # Generated solutions + eval results (gitignored)
 ```
 
-## Running specific workflows
+## Common workflows
 
 ```bash
-# Eval existing generated .cu files (no API calls)
-python3 run.py eval --run <run_dir> --sizes medium
+# Eval already-generated .cu files against a fresh data download (no API calls)
+python3 run.py eval --run runs/<model>_<config>_<date> --sizes medium
 
-# Cross-model comparison
-python3 run.py compare --runs gemini-*_l3_* claude-*_l3_*
+# Cross-model summary
+python3 scripts/consolidate_eval_data.py
+python3 scripts/export_xlsx_from_consolidated.py
 
-# Analyze one run
-python3 run.py analyze --run <run_dir>
+# Best-of-k pass@3 leaderboard (after generating 3 samples per task)
+python3 scripts/merge_pass3.py
+python3 scripts/export_pass3_xlsx.py
 
-# Multi-turn agent loop (generate → eval → feedback → refine)
-python3 run.py agent-multiturn --model gemini-3.1-pro-preview \
-    --task network_rm_dp --level 2 --turns 10
+# Decomposition pipeline: pattern attribution + LIFT analysis
+python3 scripts/analyze_pattern_impact.py
+python3 scripts/plot_pattern_cooccurrence.py
+
+# Strategy-transfer Stage-2 (treatment + length-matched control)
+python3 scripts/analyze_s2_control.py
 ```
+
+The end-to-end re-run that produced the public leaderboard is in
+`docs/REPRODUCE.md`.
 
 ## Adding a new task
 
 1. Create `tasks/<task_id>/`
 2. Write `task.json` — metadata including `"interface_mode": "compute_only"`
-3. Write `prompt_template.yaml` — description + single `solution_compute` signature + L1/L2 hints
+3. Write `prompt_template.yaml` — description + single `solution_compute` signature + L1 / L2 hints
 4. Write `cpu_reference.c` — pure computation, one `solution_compute(...)` function, no I/O
-5. Write `task_io.cu` and `task_io_cpu.c` — read input.bin into ctx, call `solution_compute`
-6. Write `gen_data.py` — generate input.bin + compute expected output via CPU baseline
+5. Write `task_io.cu` and `task_io_cpu.c` — read `input.bin` into `ctx`, call `solution_compute`
+6. Write `gen_data.py` — produce `input.bin` and the expected output via the CPU baseline
 7. Run `python3 tasks/<task_id>/gen_data.py small tasks/<task_id>/data/small --with-expected`
+
+The full porting workflow is documented in `docs/task_porting_guide.md`.
 
 ## Environment requirements
 
 - Python 3.10+
-- CUDA Toolkit 12.0+ (`nvcc`)
-- NVIDIA GPU (sm_80 or newer recommended; default is `sm_89`)
-- `nsys` (optional — for kernel-level profiling)
+- CUDA Toolkit 12.0+ (`nvcc` on `PATH`)
+- NVIDIA GPU; targets `sm_80` and newer (default `sm_89` — H200 / RTX 4090)
+- `nsys` (optional, for kernel-level profiling)
 - `pip install huggingface_hub` for data download
 
 ## Contributing
 
-Bug reports, new tasks, and new LLM integrations welcome. For large task
-additions, please include `gen_data.py` that produces deterministic output
-and keeps the medium size under 3 minutes of CPU baseline time.
-
-## Citation
-
-```bibtex
-@misc{acceleval2026,
-  title={AccelEval: A Benchmark for Evaluating LLMs on CPU-to-CUDA Code Acceleration},
-  author={Chen Dong},
-  year={2026},
-  url={https://github.com/Cosmoscd/AccelEval}
-}
-```
+Bug reports, new tasks, and new LLM-provider integrations are welcome.
+For large task additions, please include a `gen_data.py` that produces
+deterministic output and keeps the *medium* size under three minutes of
+single-thread CPU baseline time.
 
 ## License
 

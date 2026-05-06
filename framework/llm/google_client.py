@@ -17,7 +17,7 @@ class GoogleClient(BaseLLMClient):
         from google.genai import types
 
         client = genai.Client(api_key=self.api_key)
-        max_tok = max_tokens or self.model.get("max_tokens", 8192)
+        max_tok = max_tokens or self.model.get("max_tokens", 32768)
 
         config = types.GenerateContentConfig(
             max_output_tokens=max_tok,

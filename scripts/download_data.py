@@ -21,7 +21,7 @@ import argparse, os, tarfile, sys, json, hashlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_REPO = "Cosmoscd/AccelEval"
+DEFAULT_REPO = os.environ.get("ACCELEVAL_HF_REPO", "anonymous-acceleval/acceleval-data")
 
 
 def sha256(path):

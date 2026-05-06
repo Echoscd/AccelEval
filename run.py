@@ -133,7 +133,10 @@ def cmd_generate_batch(args):
     levels = args.levels or [2]
     num_samples = args.samples
 
-    scheduler = GenerationScheduler(registry, runs_dir=os.path.join("runs"))
+    scheduler = GenerationScheduler(
+        registry, runs_dir=os.path.join("runs"),
+        guidance_dir=getattr(args, "guidance_dir", None),
+    )
     jobs = scheduler.build_jobs(model_ids, task_ids, levels, num_samples)
 
     print(f"\n{'='*60}")
@@ -403,6 +406,9 @@ def main():
         help="Path to models.yaml (default: ORBENCH_ROOT/models.yaml)")
     p_batch.add_argument("--run-tag", default="batch",
         help="Tag for progress file naming")
+    p_batch.add_argument("--guidance-dir", default=None,
+        help="Directory of per-task recipes ({guidance_dir}/{task_id}.md); "
+             "when set, prompts are augmented and runs are suffixed _s2.")
     p_batch.add_argument("--yes", action="store_true",
         help="Skip cost confirmation prompt")
 

@@ -310,7 +310,7 @@ def run_breakdown(
 
     plan_resp = llm_client.generate(
         prompt=f"{PLAN_SYSTEM}\n\n{plan_user}",
-        max_tokens=4000,
+        max_tokens=32768,
         temperature=0.0,
     )
     plan = _parse_json_response(plan_resp.content or "")
@@ -364,7 +364,7 @@ def run_breakdown(
 
         step_resp = llm_client.generate(
             prompt=f"{STEP_SYSTEM}\n\n{step_user}",
-            max_tokens=16000,
+            max_tokens=32768,
             temperature=0.0,
         )
         generated_code = _extract_cuda_code(step_resp.content or "")

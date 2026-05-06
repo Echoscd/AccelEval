@@ -297,7 +297,7 @@ def analyze_sample(
     )
 
     full_prompt = f"<system>\n{system}\n</system>\n\n{user}"
-    resp = llm_client.generate(full_prompt, max_tokens=16000, temperature=0.0)
+    resp = llm_client.generate(full_prompt, max_tokens=32768, temperature=0.0)
 
     try:
         result = _parse_json(resp.content)

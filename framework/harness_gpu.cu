@@ -5,6 +5,10 @@
 #define WARMUP     3
 #define NUM_TRIALS 10
 #define SYNC()     cudaDeviceSynchronize()
+// Wipe device state (frees all model-private persistent device allocations,
+// destroys streams/events) so that any timed call must allocate from scratch.
+// No-op on the CPU harness via the matching macro in harness_cpu.c.
+#define RESET_DEVICE_STATE() do { cudaDeviceSynchronize(); cudaDeviceReset(); } while(0)
 
 static cudaEvent_t _ev_start, _ev_stop;
 #define TIMER_START() do { \
